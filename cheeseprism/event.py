@@ -33,9 +33,10 @@ class IPackageRemoved(IPackageEvent):
 
 class IndexEvent(object):
     implements(IIndexEvent)
-    def __init__(self, datafile, index):
+    def __init__(self, datafile, index, pkgdatas=None):
         self.index = index
         self.datafile = datafile
+        self.pkgdatas = pkgdatas
 
 
 class IndexUpdate(IndexEvent):

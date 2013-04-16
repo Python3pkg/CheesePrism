@@ -129,15 +129,18 @@ def from_requirements(context, request):
         filename.write_text(req_text)
         
         names = []
+        pkgdatas = {}
         rd_class = pipext.RequirementDownloader
         requirement_set, finder = rd_class.req_set_from_file(filename, request.file_root)
         downloader = rd_class(requirement_set, finder, seen=set(request.index_data))
 
         for pkginfo, outfile in downloader.download_all():
-            name = pkginfo.name
-            names.append(name)
+            pkgdatas[outfile] = \
+                request.index.pkginfo_to_pkgdata(outfile, pkginfo)
+            names.append(pkginfo.name)
 
-        request.registry.notify(event.IndexUpdate(request.index_data_path, request.index))
+        request.registry.notify(event.IndexUpdate(
+            request.index_data_path, request.index, pkgdatas))
 
         flash = request.session.flash
         if names:

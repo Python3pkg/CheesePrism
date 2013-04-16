@@ -203,27 +203,32 @@ class IndexManager(object):
         self.write_datafile(**{md5:pkgdata})
         return pkgdata, md5
 
-    def arch_to_add_map(self, arch):
+    @staticmethod
+    def pkginfo_to_pkgdata(arch, pkgi):
         start = time.time()
+        return dict(name=pkgi.name,
+                    version=pkgi.version,
+                    filename=str(arch.name),
+                    added=start)
+
+    def arch_to_add_map(self, arch):
         pkgi = self.pkginfo_from_file(arch, self.move_on_error)
         if pkgi:
-            pkgdata = dict(name=pkgi.name,
-                           version=pkgi.version,
-                           filename=str(arch.name),
-                           added=start)
-            return pkgdata
+            return self.pkginfo_to_pkgdata(arch, pkgi)
 
-    def update_data(self, datafile=None):
+    def update_data(self, datafile=None, pkgdatas=None):
         if datafile is None:
             datafile = self.datafile_path
+        archs = self.files if pkgdatas is None else pkgdatas.keys()
         start = time.time()
         with self.index_data_lock:
             data = self.data_from_path(datafile)
             new = []
-            for arch in self.files:
+            for arch in archs:
                 md5 = arch.read_md5().encode('hex')
                 if not md5 in data:
-                    pkgdata = self.arch_to_add_map(arch)
+                    pkgdata = self.arch_to_add_map(arch) if pkgdatas is None \
+                        else pkgdatas[arch]
                     if pkgdata:
                         data[md5] = pkgdata
                         new.append(pkgdata)
@@ -249,7 +254,7 @@ def rebuild_leaf(event):
 
 @subscriber(event.IIndexUpdate)
 def bulk_update_index(event):
-    new_pkgs = event.index.update_data(event.datafile)
+    new_pkgs = event.index.update_data(event.datafile, pkgdatas=event.pkgdatas)
     return list(notify_packages_added(event.index, new_pkgs))
 
 def notify_packages_added(index, new_pkgs, reg=None):
