@@ -144,7 +144,7 @@ def from_requirements(context, request):
 
         flash = request.session.flash
         if names:
-            flash('The following packages were installed'
+            flash('The following packages were installed '
                   'from the requirements file: %s' % ", ".join(names))
 
         if downloader.skip:
