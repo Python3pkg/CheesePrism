@@ -42,8 +42,4 @@ def request_funcs():
     def index_data(request):
         return request.index.data_from_path(request.file_root / request.index_data_path)
 
-
-    def includeme(config):
-        config.add_request_method()
-
     return locals()
