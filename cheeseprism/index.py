@@ -222,9 +222,6 @@ class IndexManager(object):
             new = []
             for arch in self.files:
                 md5 = arch.read_md5().encode('hex')
-                if not arch.exists():
-                    del data[md5]
-                    
                 if not md5 in data:
                     pkgdata = self.arch_to_add_map(arch)
                     if pkgdata:
