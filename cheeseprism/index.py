@@ -54,6 +54,7 @@ class IndexManager(object):
         self.index_data = index_data.copy()            
         self.leaf_data = leaf_data.copy()
         self.path = path(index_path)
+        self.home_file = self.path / self.root_index_file
         self.datafile_path = self.path / self.datafile_name
         if not self.path.exists():
             self.path.makedirs()
@@ -102,19 +103,18 @@ class IndexManager(object):
 
     def regenerate_all(self):
         items = self.projects_from_archives()
-        home_file = self.path / self.root_index_file
         start = time.time()
-        yield self.write_index_home(home_file, items)
+        yield self.write_index_home(items)
         yield [self.write_leaf(self.path / key, value) for key, value in items]
         logger.info("Regenerated index: %s", time.time() - start)
 
-    def write_index_home(self, home_file, items):
-        logger.info('Write index home:%s', home_file)
+    def write_index_home(self, items):
+        logger.info('Write index home:%s', self.home_file)
         data = self.index_data.copy()
         data['packages'] = [dict(name=key, url=str(path(self.urlbase) / key )) \
                             for key, value in items]
-        home_file.write_text(self.home_template.render(**data))
-        return home_file
+        self.home_file.write_text(self.home_template.render(**data))
+        return self.home_file
 
     def write_leaf(self, leafdir, versions, indexhtml="index.html", indexjson="index.json"):
         if not leafdir.exists():
@@ -274,10 +274,8 @@ def bulk_update_index_at_start(event):
     new_pkgs = index.update_data()
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
 
-    home_file = index.path / index.root_index_file
-    if not home_file.exists():
-        items = index.projects_from_archives()
-        index.write_index_home(home_file, items)    
+    if not index.home_file.exists():
+        index.write_index_home(index.projects_from_archives())
     return pkg_added
 
 
