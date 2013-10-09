@@ -1,0 +1,8 @@
+-e ./
+pytest
+pytest-cov
+mock
+requests
+wsgi_intercept
+coverage
+pytest-capturelog
