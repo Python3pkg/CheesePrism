@@ -10,6 +10,7 @@ from stuf import stuf
 import logging
 import textwrap
 import unittest
+import futures
 
 logger = logging.getLogger(__name__)
 here = path(__file__).parent
@@ -40,8 +41,9 @@ class IndexTestCase(unittest.TestCase):
     def make_one(self, index_name='test-index'):
         from cheeseprism import index
         self.count = next(self.counter)
+        executor = futures.ThreadPoolExecutor(max_workers=1)
         index_path = self.base / ("%s-%s" %(self.count, index_name))
-        return index.IndexManager(index_path)
+        return index.IndexManager(index_path, executor=executor)
 
     def setUp(self):
         #@@ factor out im creation
@@ -120,7 +122,7 @@ class IndexTestCase(unittest.TestCase):
         out = rebuild_leaf(event)
         assert out is not None
         assert rl.call_args == (('dummypackage',), {})
-        
+
     def test_regenerate_leaf(self):
         [x for x in self.im.regenerate_all()]
         leafindex = self.im.path / 'dummypackage/index.html'

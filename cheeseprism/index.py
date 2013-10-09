@@ -114,7 +114,13 @@ class IndexManager(object):
         start = time.time()
         yield self.write_index_home(items)
         logger.info('Wrote index home: %s', time.time() - start)
-        yield [self.write_leaf(self.path / key, value) for key, value in items]
+        with self.executor:
+            submit = self.executor.submit
+            leaf_fts = [submit(self.write_leaf,
+                               self.path / key,
+                               value) \
+                               for key, value in items]
+            yield [future.result() for future in futures.as_completed(leaf_fts)]
         logger.info("Regenerated index: %s", time.time() - start)
 
     def write_index_home(self, items):
