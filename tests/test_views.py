@@ -11,6 +11,7 @@ from pyramid.events import subscriber
 from pyramid.httpexceptions import HTTPFound
 from stuf import stuf
 from test_pipext import PipExtBase
+import futures
 import itertools
 import unittest
 
@@ -30,7 +31,7 @@ class CPDummyRequest(testing.DummyRequest):
     @property
     def settings(self):
         return {}
-    
+
     @property
     def file_root(self):
         test_dir = getattr(self, 'test_dir')
@@ -47,7 +48,9 @@ class CPDummyRequest(testing.DummyRequest):
 
     @property
     def index(self):
-        return index.IndexManager(self.file_root, template_env=self.index_templates)
+        return index.IndexManager(self.file_root,
+                                  template_env=self.index_templates,
+                                  executor=futures.ThreadPoolExecutor(max_workers=1))
 
     @reify
     def response(self):
@@ -87,11 +90,11 @@ class ViewTests(unittest.TestCase):
     def setup_event(self):
         self.event_results = {}
         from cheeseprism.event import IPackageEvent
-        
+
         @subscriber(IPackageEvent)
         def test_event_fire(event):
             self.event_results.setdefault(event.__class__.__name__, []).append(event)
-            
+
         self.config.add_subscriber(test_event_fire)
 
     def tearDown(self):
@@ -141,7 +144,7 @@ class ViewTests(unittest.TestCase):
                   version='1.2.3',
                   md5_digest='12345',
                   filename='boto-1.2.3.tar.gz')
-        pd.return_value = [td]        
+        pd.return_value = [td]
         request = CPDummyRequest()
         request.matchdict.update(td)
         request.index_data.update({'12345':True})
@@ -304,7 +307,7 @@ class ViewTests(unittest.TestCase):
             assert flash.called
             assert notify.called
 
-            
+
 @contextmanager
 def mock_downloader():
     with patch('cheeseprism.pipext.RequirementDownloader') as dl:
@@ -317,4 +320,3 @@ def mock_downloader():
         dler.errors = ('error',)
         dl.req_set_from_file.return_value = (dl, Mock(name='finder'))
         yield dl
-

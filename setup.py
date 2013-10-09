@@ -8,6 +8,7 @@ CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
 
 requires = ['Jinja2',
             'Paste',
+            'futures',
             'path.py',
             'pkginfo',
             'pyramid',
@@ -17,9 +18,6 @@ requires = ['Jinja2',
             'pip']
 
 version='0.3'
-
-with open(os.path.join(here, 'tests-require.txt')) as tr:
-    test_requires = [x for x in tr.read().split() if x] + requires
 
 setup(name='CheesePrism',
       version=version,
@@ -33,18 +31,15 @@ setup(name='CheesePrism',
         ],
       author='Whit Morriss (et al.)',
       author_email='whit-at-surveymonkey-dot-com',
-      url='https://github.com/SurveyMonkey/CheesePrism',
+      url='https://github.com/whitmo/CheesePrism',
       keywords='web pyramid pylons',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
-      tests_require=test_requires,
       test_suite="nose.collector",
       entry_points = """\
       [paste.app_factory]
       main = cheeseprism.wsgiapp:main
       """
       )
-
-

@@ -13,7 +13,7 @@ def request_funcs():
     """
     Returns a map of functions to apply to the request
 
-    No variables can be assigned for this work.
+    ATT: No variables can be assigned for this work.
     """
     def userid(request):
         return unauthenticated_userid(request)
@@ -22,22 +22,21 @@ def request_funcs():
     def settings(request):
         return request.registry.settings
 
+    def executor(request):
+        return request.registry['cp.executor']
 
     def index_templates(request):
         return request.registry.settings['cheeseprism.index_templates']
 
-
     def file_root(request):
         return path(request.registry.settings['cheeseprism.file_root'])
 
-
     def index(request):
-        return IndexManager.from_settings(request.settings)
-
+        import pdb;pdb.set_trace()
+        return IndexManager.from_registry(request.registry)
 
     def index_data_path(request):
         return request.index.datafile_path
-
 
     def index_data(request):
         return request.index.data_from_path(request.file_root / request.index_data_path)

@@ -9,6 +9,7 @@ from path import path
 from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
+import futures
 import jinja2
 import json
 import logging
@@ -17,7 +18,6 @@ import re
 import threading
 import time
 import traceback
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +45,13 @@ class IndexManager(object):
     home_template = template('home.html')
 
     def __init__(self, index_path, template_env=None, arch_baseurl='/index/', urlbase='',
-                 index_data={}, leaf_data={}, error_folder='_errors'):
+                 index_data={}, leaf_data={}, error_folder='_errors', executor=None):
         self.urlbase = urlbase
         self.arch_baseurl = arch_baseurl
         self.template_env = template_env
         if not self.template_env:
             self.template_env = self.default_env_factory('')
-        self.index_data = index_data.copy()            
+        self.index_data = index_data.copy()
         self.leaf_data = leaf_data.copy()
         self.path = path(index_path)
         self.home_file = self.path / self.root_index_file
@@ -60,9 +60,16 @@ class IndexManager(object):
             self.path.makedirs()
         self.error_folder = self.path / error_folder
         self.move_on_error = partial(self.move_on_error, self.error_folder)
+        self.executor = executor
 
     @classmethod
-    def from_settings(cls, settings):
+    def from_registry(cls, registry):
+        settings = registry.settings
+        executor = registry['cp.executor']
+        return cls.from_settings(settings, executor)
+
+    @classmethod
+    def from_settings(cls, settings, executor=None):
         file_root = path(settings['cheeseprism.file_root'])
         if not file_root.exists():
             file_root.makedirs()
@@ -72,13 +79,14 @@ class IndexManager(object):
         return cls(settings['cheeseprism.file_root'],
                    urlbase=urlbase,
                    arch_baseurl=abu,
-                   template_env=settings['cheeseprism.index_templates'])
+                   template_env=settings['cheeseprism.index_templates'],
+                   executor=executor)
 
     @staticmethod
     def move_on_error(error_folder, exc, path):
         logger.error(traceback.format_exc())
         path.rename(error_folder)
-    
+
     @property
     def default_env_factory(self):
         return EnvFactory.from_str
@@ -105,11 +113,12 @@ class IndexManager(object):
         items = self.projects_from_archives()
         start = time.time()
         yield self.write_index_home(items)
+        logger.info('Wrote index home: %s', time.time() - start)
         yield [self.write_leaf(self.path / key, value) for key, value in items]
         logger.info("Regenerated index: %s", time.time() - start)
 
     def write_index_home(self, items):
-        logger.info('Write index home:%s', self.home_file)
+        logger.info('Write index home: %s', self.home_file)
         data = self.index_data.copy()
         data['packages'] = [dict(name=key, url=str(path(self.urlbase) / key )) \
                             for key, value in items]
@@ -144,7 +153,7 @@ class IndexManager(object):
                                  atime=fpath.ctime,
                                  ) for dist, fpath in versions]
                 json.dump(leafdata, jsonout)
-                
+
         leafhome.utime((time.time(), time.time()))
         return leafhome
 
@@ -170,7 +179,7 @@ class IndexManager(object):
         except Exception, e:
             if handle_error is not None:
                 return handle_error(e, path)
-            raise 
+            raise
         raise RuntimeError("Unrecognized extension: %s" %path)
 
     @staticmethod
@@ -192,7 +201,7 @@ class IndexManager(object):
             with open(self.datafile_path, 'w') as root:
                 json.dump(data, root)
             return data
-        
+
     def register_archive(self, arch, registry=None):
         """
         Adds an archive to the master data store (index.json)
@@ -216,6 +225,15 @@ class IndexManager(object):
         if pkgi:
             return self.pkginfo_to_pkgdata(arch, pkgi)
 
+    def read_archives(self, arch, pkgdatas, data):
+        md5 = arch.read_md5().encode('hex')
+        if not md5 in data:
+            if pkgdatas is None:
+                pkgdata = self.arch_to_add_map(arch)
+            else:
+                pkgdata = pkgdatas[arch]
+        return md5, pkgdata
+
     def update_data(self, datafile=None, pkgdatas=None):
         if datafile is None:
             datafile = self.datafile_path
@@ -224,12 +242,17 @@ class IndexManager(object):
         with self.index_data_lock:
             data = self.data_from_path(datafile)
             new = []
-            for arch in archs:
-                md5 = arch.read_md5().encode('hex')
-                if not md5 in data:
-                    pkgdata = self.arch_to_add_map(arch) if pkgdatas is None \
-                        else pkgdatas[arch]
-                    if pkgdata:
+            with self.executor:
+                submit = self.executor.submit
+                arch_futures = [submit(self.read_archive,
+                                       arch,
+                                       pkgdatas,
+                                       data) \
+                                       for arch in archs]
+
+                for future in futures.as_completed(arch_futures):
+                    md5, pkgdata = future.result()
+                    if pkgdata is not None:
                         data[md5] = pkgdata
                         new.append(pkgdata)
 
@@ -237,7 +260,7 @@ class IndexManager(object):
             logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
             with open(datafile, 'w') as root:
                 json.dump(data, root)
-                
+
         elapsed = time.time() - start
         logger.info("Rebuilt /index.json: %ss" %elapsed)
         return new
@@ -259,7 +282,7 @@ def bulk_update_index(event):
 
 def notify_packages_added(index, new_pkgs, reg=None):
     if reg is None:
-        reg = threadlocal.get_current_registry()    
+        reg = threadlocal.get_current_registry()
     for data in new_pkgs:
         yield reg.notify(event.PackageAdded(index,
                                             name=data['name'],
@@ -269,9 +292,7 @@ def notify_packages_added(index, new_pkgs, reg=None):
 @subscriber(ApplicationCreated)
 def bulk_update_index_at_start(event):
     reg = event.app.registry
-    settings = reg.settings
-    
-    index = IndexManager.from_settings(settings)
+    index = IndexManager.from_registry(reg)
 
     new_pkgs = index.update_data()
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
@@ -312,7 +333,3 @@ class EnvFactory(object):
         choices = [jinja2.PackageLoader('cheeseprism', 'templates/index')]
         if config: [choices.insert(0, loader) for loader in factory.loaders]
         return factory.env_class(loader=jinja2.ChoiceLoader(choices))
-
-
-
-
