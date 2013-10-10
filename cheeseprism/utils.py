@@ -2,13 +2,14 @@ import logging
 import os
 import pkg_resources
 import re
+import time
 
 logger = logging.getLogger(__name__)
 
 
 def resource_spec(spec):
     """
-    Loads resource from a string specifier. 
+    Loads resource from a string specifier.
     >>> from doula.utils import resource_spec
     >>> resource_spec('egg:ReleaseDoula#doula/roles.yml')
     '.../doula/roles.yml'

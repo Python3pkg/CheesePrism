@@ -32,7 +32,6 @@ def request_funcs():
         return path(request.registry.settings['cheeseprism.file_root'])
 
     def index(request):
-        import pdb;pdb.set_trace()
         return IndexManager.from_registry(request.registry)
 
     def index_data_path(request):

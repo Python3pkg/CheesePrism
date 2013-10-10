@@ -20,11 +20,21 @@ logger = logging.getLogger(__name__)
 
 _ = TranslationStringFactory('CheesePrism')
 
- 
+
 @view_config(name='instructions', renderer='instructions.html', context=resources.App)
 def instructions(context, request):
     return {'page': 'instructions'}
 
+
+@view_config(name='index', renderer='index/home.html', context=resources.App)
+def index_view(context, request):
+    #folders = request.index.path.dirs()
+    index = request.index
+    data = index.index_data.copy()
+    items = index.projects_from_archives()
+    data['packages'] = [dict(name=key, url=str(path(index.urlbase) / key )) \
+                        for key, value in items]
+    return data
 
 @view_config(renderer='index.html', context=resources.App)
 @view_config(name='simple', context=resources.App)
@@ -34,7 +44,7 @@ def upload(context, request):
     """
     if request.method == 'POST':
         if not hasattr(request.POST['content'], 'file'):
-            raise RuntimeError('No file attached') 
+            raise RuntimeError('No file attached')
 
         fieldstorage = request.POST['content']
         filename = fieldstorage.filename
@@ -69,7 +79,7 @@ def from_pypi(request, fpkgs='/find-packages'):
     name = request.matchdict['name']
     version = request.matchdict['version']
     dists = PyPi.release_urls(name, version)
-    flash = request.session.flash 
+    flash = request.session.flash
     if not dists:
         flash("%s-%s not found" %(name, version))
         return HTTPFound(fpkgs)
@@ -79,7 +89,7 @@ def from_pypi(request, fpkgs='/find-packages'):
     if candidates[0]['md5_digest'] in request.index_data:
         logger.debug('Package %s-%s already in index' %(name, version))
         return HTTPFound('/index/%s' %name)
-            
+
     details = candidates[0]
     url = details['url']
     filename = details['filename']
@@ -99,7 +109,7 @@ def from_pypi(request, fpkgs='/find-packages'):
     if newfile is not None:
         try:
             added_event = event.PackageAdded(request.index, path=newfile)
-            request.registry.notify(added_event)            
+            request.registry.notify(added_event)
             flash('%s-%s was installed into the index successfully.' % (name, version))
             return HTTPFound('/index/%s' %name)
         except Exception, e:
@@ -127,7 +137,7 @@ def from_requirements(context, request):
         req_text = request.POST['req_file'].file.read()
         filename = path(tempfile.gettempdir()) / 'temp-req.txt'
         filename.write_text(req_text)
-        
+
         names = []
         pkgdatas = {}
         rd_class = pipext.RequirementDownloader
@@ -154,8 +164,6 @@ def from_requirements(context, request):
         if downloader.errors:
             for error in downloader.errors:
                 flash('Download issue: %s' %error)
-        
+
         return HTTPFound('/load-requirements')
     return {}
-
-
