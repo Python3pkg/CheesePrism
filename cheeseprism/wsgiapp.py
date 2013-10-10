@@ -1,14 +1,21 @@
 from cheeseprism.auth import BasicAuthenticationPolicy
 from cheeseprism.index import EnvFactory
 from cheeseprism.resources import App
+from functools import partial
 from pyramid.config import Configurator
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
+from pyramid.settings import asbool
 from pyramid_jinja2 import renderer_factory
+import multiprocessing
 import futures
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def main(global_config, **settings):
     settings = dict(global_config, **settings)
+
     settings.setdefault('jinja2.i18n.domain', 'CheesePrism')
 
     session_factory = UnencryptedCookieSessionFactoryConfig('cheeseprism')
@@ -18,17 +25,25 @@ def main(global_config, **settings):
                           authentication_policy=\
                           BasicAuthenticationPolicy(BasicAuthenticationPolicy.noop_check))
 
-    executor_type = settings.get('cp.futures', 'thread')
+    executor_type = settings.get('cheeseprism.futures', 'thread')
     executor = executor_type != 'process' and futures.ThreadPoolExecutor \
       or futures.ProcessPoolExecutor
-      
-    workers = int(settings.get('cp.futures.workers', 0))
-    if executor_type == 'process':
-        workers = workers <= 0 and None or workers
+
+    workers = int(settings.get('cheeseprism.futures.workers', 0))
+    if executor_type == 'process' and workers <= 0:
+        workers = multiprocessing.cpu_count() + 1
     else:
         workers = workers <= 0 and 10 or workers
 
-    config.registry['cp.executor'] = executor(workers)
+    logging.info("using %s executor with %s workers", executor_type, workers)
+    config.registry['cp.executor'] = partial(executor, workers)
+
+    if asbool(settings.get('cheeseprism.pipcache_mirror', False)):
+        config.include('.sync.pip')
+
+    if asbool(settings.get('cheeseprism.auto_sync', False)):
+        config.include('.sync.auto')
+
     config.add_translation_dirs('locale/')
     config.include('pyramid_jinja2')
     config.add_renderer('.html', renderer_factory)
