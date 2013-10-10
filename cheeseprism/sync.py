@@ -1,8 +1,8 @@
 from . import utils
 from .index import IndexManager
 from .index import notify_packages_added
+from contextlib import contextmanager
 from path import path
-from pyramid.settings import asbool
 from threading import Thread
 import logging
 import os
@@ -41,10 +41,28 @@ def update_index(index, reg):
 
         return pkg_added
 
+def wait_for_file(fp, sleep=0.2, max_tries=5):
+    fp = path(fp)
+    if not fp.exists():
+        logger.info('Waiting for base dir: %s' %fp)
+        for x in range(max_tries):
+            if not fp.exists():
+                time.sleep(0.5)
+                logger.info('bueller?')
+            else:
+                logger.info('Found based dir: %s' %fp)
+                yield fp
+    raise RuntimeError('%s not found in %ss' %(fp, max_tries * sleep))
+
 
 def sync_cache(index, registry):
-    pdc = path(os.environ['PIP_DOWNLOAD_CACHE'])
-    assert pdc.exists(), "Environmental var $PIP_DOWNLOAD_CACHE must be set to sync pip cache"
+    pdc = path(os.environ.get('PIP_DOWNLOAD_CACHE'))
+    if not pdc.exists():
+        logger.error("Environmental var $PIP_DOWNLOAD_CACHE not set or %s not yet created" %pdc)
+        return pdc
+
+    wait_for_file(index.path)
+    wait_for_file(index.datafile_path)
     sync_folder(index, pdc)
     update_index(index, registry)
 

@@ -37,13 +37,6 @@ def main(global_config, **settings):
 
     logging.info("using %s executor with %s workers", executor_type, workers)
     config.registry['cp.executor'] = partial(executor, workers)
-
-    if asbool(settings.get('cheeseprism.pipcache_mirror', False)):
-        config.include('.sync.pip')
-
-    if asbool(settings.get('cheeseprism.auto_sync', False)):
-        config.include('.sync.auto')
-
     config.add_translation_dirs('locale/')
     config.include('pyramid_jinja2')
     config.add_renderer('.html', renderer_factory)
