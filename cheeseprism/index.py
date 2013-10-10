@@ -1,15 +1,15 @@
 """
 Classes, subscribers and functions for dealing with index management
 """
-from cheeseprism import event
-from cheeseprism.desc import template
-from cheeseprism.desc import updict
+from . import event
+from .desc import template
+from .desc import updict
+from .utils import benchmark
 from functools import partial
 from path import path
 from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
-import futures
 import jinja2
 import json
 import logging
@@ -20,6 +20,56 @@ import time
 import traceback
 
 logger = logging.getLogger(__name__)
+
+
+class ArchiveUtil(object):
+    """
+    A pickeable object we can pass via mp queues
+    """
+    EXTS = re.compile(r'^.*(?P<ext>\.egg|\.gz|\.bz2|\.tgz|\.zip)$')
+
+    def read(self, (arch, data)):
+        md5 = arch.read_md5().encode('hex')
+        pkgdata = None
+        if not md5 in data:
+            pkgdata = self.arch_to_add_map(arch)
+        return md5, pkgdata
+    __call__ = read
+
+    def arch_to_add_map(self, arch):
+        pkgi = self.pkginfo_from_file(arch, self.move_on_error)
+        if pkgi:
+            return self.pkginfo_to_pkgdata(arch, pkgi)
+
+    def pkginfo_to_pkgdata(self, arch, pkgi):
+        start = time.time()
+        return dict(name=pkgi.name,
+                    version=pkgi.version,
+                    filename=str(arch.name),
+                    added=start)
+
+    def move_on_error(self, error_folder, exc, path):
+        logger.error(traceback.format_exc())
+        path.rename(error_folder)
+
+    def extension_of(self, path):
+        match = self.EXTS.match(str(path))
+        if match:
+            return match.groupdict()['ext']
+
+    def pkginfo_from_file(self, path, handle_error=None):
+        ext = self.extension_of(path)
+        try:
+            if ext is not None:
+                if ext in set(('.gz','.tgz', '.bz2', '.zip')):
+                    return pkginfo.sdist.SDist(path)
+                elif ext == '.egg':
+                    return pkginfo.bdist.BDist(path)
+        except Exception, e:
+            if handle_error is not None:
+                return handle_error(e, path)
+            raise
+        raise RuntimeError("Unrecognized extension: %s" %path)
 
 
 class IndexManager(object):
@@ -44,21 +94,34 @@ class IndexManager(object):
     leaf_template = template('leaf.html')
     home_template = template('home.html')
 
+    at = archive_tool = ArchiveUtil()
+    move_on_error = at.move_on_error
+    arch_to_add_map = at.arch_to_add_map
+    pkginfo_to_pkgdata = at.pkginfo_to_pkgdata
+    pkginfo_from_file = at.pkginfo_from_file
+    extension_of = at.extension_of
+
+
     def __init__(self, index_path, template_env=None, arch_baseurl='/index/', urlbase='',
-                 index_data={}, leaf_data={}, error_folder='_errors', executor=None):
+                 index_data={}, leaf_data={}, error_folder='_errors/', executor=None):
         self.urlbase = urlbase
         self.arch_baseurl = arch_baseurl
         self.template_env = template_env
+
         if not self.template_env:
             self.template_env = self.default_env_factory('')
         self.index_data = index_data.copy()
         self.leaf_data = leaf_data.copy()
-        self.path = path(index_path)
+        self.path = path(index_path).makedirs_p()
         self.home_file = self.path / self.root_index_file
         self.datafile_path = self.path / self.datafile_name
-        if not self.path.exists():
-            self.path.makedirs()
+
         self.error_folder = self.path / error_folder
+        if not (self.error_folder.exists() and self.error_folder.isdir()):
+            if self.error_folder.endswith('/') and not self.error_folder.isdir():
+                self.error_folder.parent.remove_p()
+            self.error_folder.makedirs()
+
         self.move_on_error = partial(self.move_on_error, self.error_folder)
         self.executor = executor
 
@@ -82,27 +145,25 @@ class IndexManager(object):
                    template_env=settings['cheeseprism.index_templates'],
                    executor=executor)
 
-    @staticmethod
-    def move_on_error(error_folder, exc, path):
-        logger.error(traceback.format_exc())
-        path.rename(error_folder)
-
     @property
     def default_env_factory(self):
         return EnvFactory.from_str
 
     @property
     def files(self):
-        return (x for x in self.path.files() if self.EXTS.match(x))
+        return (x for x in self.path.files() if self.archive_tool.EXTS.match(x))
 
     def projects_from_archives(self):
-        files = self.files
-        projects = {}
-        for item in files:
-            itempath = self.path / item
-            info = self.pkginfo_from_file(itempath)
-            projects.setdefault(info.name, []).append((info, itempath))
-        return sorted(projects.items())
+        with benchmark('-- collected projects'):
+            projects = {}
+            paths = (self.path / item for item in self.files)
+            with self.executor() as exe:
+                results = [info for info in exe.map(pki_ff, paths)]
+                for itempath, info in results:
+                    projects.setdefault(info.name, []).append((info, itempath))
+
+        with benchmark('-- sorted projects'):
+            return sorted(projects.items())
 
     def regenerate_leaf(self, leafname):
         files = self.path.files('%s-*.*' %leafname)
@@ -111,17 +172,11 @@ class IndexManager(object):
 
     def regenerate_all(self):
         items = self.projects_from_archives()
-        start = time.time()
-        yield self.write_index_home(items)
-        logger.info('Wrote index home: %s', time.time() - start)
-        with self.executor:
-            submit = self.executor.submit
-            leaf_fts = [submit(self.write_leaf,
-                               self.path / key,
-                               value) \
-                               for key, value in items]
-            yield [future.result() for future in futures.as_completed(leaf_fts)]
-        logger.info("Regenerated index: %s", time.time() - start)
+        with benchmark('-- wrote index.html'):
+            yield self.write_index_home(items)
+
+        with benchmark('-- regenerated index'):
+            yield [self.write_leaf(self.path / key, value) for key, value in items]
 
     def write_index_home(self, items):
         logger.info('Write index home: %s', self.home_file)
@@ -159,34 +214,12 @@ class IndexManager(object):
                                  atime=fpath.ctime,
                                  ) for dist, fpath in versions]
                 json.dump(leafdata, jsonout)
-
-        leafhome.utime((time.time(), time.time()))
+                leafhome.utime((time.time(), time.time()))
         return leafhome
 
     def leaf_values(self, leafname, archive):
         url = str(path(self.arch_baseurl) / archive.name)
         return dict(url=url, name=archive.name)
-
-    @classmethod
-    def extension_of(cls, path):
-        match = cls.EXTS.match(str(path))
-        if match:
-            return match.groupdict()['ext']
-
-    @classmethod
-    def pkginfo_from_file(cls, path, handle_error=None):
-        ext = cls.extension_of(path)
-        try:
-            if ext is not None:
-                if ext in set(('.gz','.tgz', '.bz2', '.zip')):
-                    return pkginfo.sdist.SDist(path)
-                elif ext == '.egg':
-                    return pkginfo.bdist.BDist(path)
-        except Exception, e:
-            if handle_error is not None:
-                return handle_error(e, path)
-            raise
-        raise RuntimeError("Unrecognized extension: %s" %path)
 
     @staticmethod
     def data_from_path(datafile):
@@ -194,7 +227,9 @@ class IndexManager(object):
         if datafile.exists():
             with open(datafile) as stream:
                 return json.load(stream)
-        logger.error("No datafile found for %s", datafile)
+        else:
+            logger.error("No datafile found for %s", datafile)
+            datafile.write_text("{}")
         return {}
 
     def write_datafile(self, **data):
@@ -218,58 +253,33 @@ class IndexManager(object):
         self.write_datafile(**{md5:pkgdata})
         return pkgdata, md5
 
-    @staticmethod
-    def pkginfo_to_pkgdata(arch, pkgi):
-        start = time.time()
-        return dict(name=pkgi.name,
-                    version=pkgi.version,
-                    filename=str(arch.name),
-                    added=start)
-
-    def arch_to_add_map(self, arch):
-        pkgi = self.pkginfo_from_file(arch, self.move_on_error)
-        if pkgi:
-            return self.pkginfo_to_pkgdata(arch, pkgi)
-
-    def read_archives(self, arch, pkgdatas, data):
-        md5 = arch.read_md5().encode('hex')
-        if not md5 in data:
-            if pkgdatas is None:
-                pkgdata = self.arch_to_add_map(arch)
-            else:
-                pkgdata = pkgdatas[arch]
-        return md5, pkgdata
-
     def update_data(self, datafile=None, pkgdatas=None):
         if datafile is None:
             datafile = self.datafile_path
+
         archs = self.files if pkgdatas is None else pkgdatas.keys()
-        start = time.time()
-        with self.index_data_lock:
-            data = self.data_from_path(datafile)
-            new = []
-            with self.executor:
-                submit = self.executor.submit
-                arch_futures = [submit(self.read_archive,
-                                       arch,
-                                       pkgdatas,
-                                       data) \
-                                       for arch in archs]
+        with benchmark("Rebuilt /index.json"):
+            with self.index_data_lock:
+                data = self.data_from_path(datafile)
+                new = []
+                with self.executor() as exe:
+                    read = self.archive_tool
+                    for md5, pkgdata in exe.map(read,
+                                                ((arch, data) for arch in archs)):
 
-                for future in futures.as_completed(arch_futures):
-                    md5, pkgdata = future.result()
-                    if pkgdata is not None:
-                        data[md5] = pkgdata
-                        new.append(pkgdata)
+                        if pkgdata is not None:
+                            data[md5] = pkgdata
+                            new.append(pkgdata)
 
-            pkgs = len(set(x['name'] for x in data.values()))
-            logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
-            with open(datafile, 'w') as root:
-                json.dump(data, root)
-
-        elapsed = time.time() - start
-        logger.info("Rebuilt /index.json: %ss" %elapsed)
+                pkgs = len(set(x['name'] for x in data.values()))
+                logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
+                with open(datafile, 'w') as root:
+                    json.dump(data, root)
         return new
+
+
+def pki_ff(path, handle_error=None, func=IndexManager.pkginfo_from_file):
+    return path, func(path, handle_error=handle_error)
 
 
 @subscriber(event.IPackageAdded)
@@ -286,6 +296,7 @@ def bulk_update_index(event):
     new_pkgs = event.index.update_data(event.datafile, pkgdatas=event.pkgdatas)
     return list(notify_packages_added(event.index, new_pkgs))
 
+
 def notify_packages_added(index, new_pkgs, reg=None):
     if reg is None:
         reg = threadlocal.get_current_registry()
@@ -298,13 +309,15 @@ def notify_packages_added(index, new_pkgs, reg=None):
 @subscriber(ApplicationCreated)
 def bulk_update_index_at_start(event):
     reg = event.app.registry
-    index = IndexManager.from_registry(reg)
 
+    index = IndexManager.from_registry(reg)
+    logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
+    start = time.time()
     new_pkgs = index.update_data()
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
+    index.write_index_home(index.projects_from_archives())
 
-    if not index.home_file.exists():
-        index.write_index_home(index.projects_from_archives())
+    logger.info('-- Package inspection finished in %ss', time.time() - start)
     return pkg_added
 
 
