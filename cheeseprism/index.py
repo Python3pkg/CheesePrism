@@ -36,8 +36,8 @@ class ArchiveUtil(object):
         return md5, pkgdata
     __call__ = read
 
-    def arch_to_add_map(self, arch):
-        pkgi = self.pkginfo_from_file(arch, self.move_on_error)
+    def arch_to_add_map(self, arch, error_handler=None):
+        pkgi = self.pkginfo_from_file(arch, error_handler)
         if pkgi:
             return self.pkginfo_to_pkgdata(arch, pkgi)
 
@@ -96,7 +96,7 @@ class IndexManager(object):
 
     at = archive_tool = ArchiveUtil()
     move_on_error = at.move_on_error
-    arch_to_add_map = at.arch_to_add_map
+
     pkginfo_to_pkgdata = at.pkginfo_to_pkgdata
     pkginfo_from_file = at.pkginfo_from_file
     extension_of = at.extension_of
@@ -123,16 +123,19 @@ class IndexManager(object):
             self.error_folder.makedirs()
 
         self.move_on_error = partial(self.move_on_error, self.error_folder)
+        self.arch_to_add_map = partial(self.at.arch_to_add_map,
+                                       error_handler=self.move_on_error)
         self.executor = executor
 
     @classmethod
     def from_registry(cls, registry):
         settings = registry.settings
         executor = registry['cp.executor']
-        return cls.from_settings(settings, executor)
+        env = registry['cp.index_templates']
+        return cls.from_settings(settings, executor, env)
 
     @classmethod
-    def from_settings(cls, settings, executor=None):
+    def from_settings(cls, settings, executor=None, env=None):
         file_root = path(settings['cheeseprism.file_root'])
         if not file_root.exists():
             file_root.makedirs()
@@ -142,7 +145,7 @@ class IndexManager(object):
         return cls(settings['cheeseprism.file_root'],
                    urlbase=urlbase,
                    arch_baseurl=abu,
-                   template_env=settings['cheeseprism.index_templates'],
+                   template_env=env,
                    executor=executor)
 
     @property

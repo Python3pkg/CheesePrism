@@ -54,6 +54,13 @@ def main(global_config, **settings):
     config.scan('.index')
     config.add_route('package', 'package/{name}/{version}')
     config.add_view('.views.from_pypi', route_name='package')
-    settings['index_templates'] = EnvFactory.from_str(settings['cheeseprism.index_templates'])
+    tempspec = settings.get('cheeseprism.index_templates', '')
+    config.registry['cp.index_templates'] = EnvFactory.from_str(tempspec)
 
+    if asbool(settings.get('cheeseprism.pipcache_mirror', False)):
+        config.include('.sync.pip')
+
+    if asbool(settings.get('cheeseprism.auto_sync', False)):
+        config.include('.sync.auto')
+    
     return config.make_wsgi_app()

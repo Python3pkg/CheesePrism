@@ -43,15 +43,13 @@ class IndexTestCase(unittest.TestCase):
         self.count = next(self.counter)
         executor = partial(futures.ThreadPoolExecutor, 4)
         index_path = self.base / ("%s-%s" %(self.count, index_name))
-        return index.IndexManager(index_path, executor=executor)
-
-    def setUp(self):
-        #@@ factor out im creation
-        self.im = self.make_one()
-        self.dummy.copy(self.im.path)
-        self.dummypath = self.im.path / self.dummy.name
+        idx = index.IndexManager(index_path, executor=executor)
+        self.dummy.copy(idx.path)
+        self.dummypath = idx.path / self.dummy.name
+        return idx
 
     def test_register_archive(self):
+        self.im = self.make_one()
         pkgdata, md5 = self.im.register_archive(self.dummypath)
         assert md5 == '3ac58d89cb7f7b718bc6d0beae85c282'
         assert pkgdata
@@ -64,6 +62,7 @@ class IndexTestCase(unittest.TestCase):
         """
         create and write archive data to index.json
         """
+        self.im = self.make_one()
         data = self.im.write_datafile(hello='computer')
         assert 'hello' in data
         assert self.im.datafile_path.exists()
@@ -73,6 +72,7 @@ class IndexTestCase(unittest.TestCase):
         """
         write data to an existing datafile
         """
+        self.im = self.make_one()
         data = self.im.write_datafile(hello='computer')
         assert self.im.datafile_path.exists()
 
@@ -81,6 +81,7 @@ class IndexTestCase(unittest.TestCase):
         assert self.im.data_from_path(self.im.datafile_path)['hello'] == 'operator'
 
     def test_regenerate_index(self):
+        self.im = self.make_one()
         home, leaves = self.im.regenerate_all()
         pth = self.im.path
         file_structure = [(x.parent.name, x.name) for x in pth.walk()]
@@ -117,13 +118,14 @@ class IndexTestCase(unittest.TestCase):
         """
         from cheeseprism.event import PackageAdded
         from cheeseprism.index import rebuild_leaf
-
+        self.im = self.make_one()
         event = PackageAdded(self.im, self.tdir / path('dummypackage2/dist/dummypackage-0.1.tar.gz'))
         out = rebuild_leaf(event)
         assert out is not None
         assert rl.call_args == (('dummypackage',), {})
 
     def test_regenerate_leaf(self):
+        self.im = self.make_one()
         [x for x in self.im.regenerate_all()]
         leafindex = self.im.path / 'dummypackage/index.html'
         new_arch = self.tdir / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
@@ -138,6 +140,7 @@ class IndexTestCase(unittest.TestCase):
     @patch('pyramid.threadlocal.get_current_registry')
     def test_notify_packages_added(self, getreg):
         from cheeseprism.index import notify_packages_added
+        self.im = self.make_one()
         pkg = stuf(name='dummypackage', version='0.1',
                    filename=self.dummy.name)
         pkgs = pkg,
@@ -156,6 +159,7 @@ class IndexTestCase(unittest.TestCase):
 
     def test_notify_packages_added_raises(self):
         from cheeseprism.index import notify_packages_added
+        self.im = self.make_one()
         with self.assertRaises(StopIteration):
             next(notify_packages_added(Mock(name='index'), []))
 
