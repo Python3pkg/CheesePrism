@@ -1,6 +1,7 @@
 from cheeseprism import index
 from cheeseprism.resources import App
 from contextlib import contextmanager
+from functools import partial
 from mock import Mock
 from mock import patch
 from nose.tools import raises
@@ -50,7 +51,7 @@ class CPDummyRequest(testing.DummyRequest):
     def index(self):
         return index.IndexManager(self.file_root,
                                   template_env=self.index_templates,
-                                  executor=futures.ThreadPoolExecutor(max_workers=1))
+                                  executor=partial(futures.ThreadPoolExecutor, max_workers=4))
 
     @reify
     def response(self):

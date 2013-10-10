@@ -1,16 +1,16 @@
 from cheeseprism.utils import resource_spec
+from functools import partial
 from itertools import count
 from mock import Mock
 from mock import patch
 from nose.tools import raises
 from path import path
 from pprint import pformat as pprint
-from pytest import mark
 from stuf import stuf
+import futures
 import logging
 import textwrap
 import unittest
-import futures
 
 logger = logging.getLogger(__name__)
 here = path(__file__).parent
@@ -41,7 +41,7 @@ class IndexTestCase(unittest.TestCase):
     def make_one(self, index_name='test-index'):
         from cheeseprism import index
         self.count = next(self.counter)
-        executor = futures.ThreadPoolExecutor(max_workers=1)
+        executor = partial(futures.ThreadPoolExecutor, 4)
         index_path = self.base / ("%s-%s" %(self.count, index_name))
         return index.IndexManager(index_path, executor=executor)
 
