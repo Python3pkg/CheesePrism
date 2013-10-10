@@ -80,3 +80,20 @@ def secure_filename(filename):
         filename = '_' + filename
 
     return filename
+
+
+class benchmark(object):
+    """
+    from DaBeaz http://bit.ly/15nNrlF
+    """
+    def __init__(self, name, logger=logger.debug):
+        self.name = name
+        self.logger = logger
+
+    def __enter__(self):
+        self.start = time.time()
+
+    def __exit__(self,ty,val,tb):
+        end = time.time()
+        self.logger("%s: %0.3f seconds", self.name, end-self.start)
+        return False
