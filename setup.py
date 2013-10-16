@@ -16,7 +16,7 @@ requires = ['Jinja2',
             'requests',
             'pip']
 
-version='0.3.5'
+version='0.3.5a1'
 
 setup(name='CheesePrism',
       version=version,
