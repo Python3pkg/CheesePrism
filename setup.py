@@ -16,10 +16,7 @@ requires = ['Jinja2',
             'requests',
             'pip']
 
-version='0.3'
-
-with open(os.path.join(here, 'tests-require.txt')) as tr:
-    test_requires = [x for x in tr.read().split() if x] + requires
+version='0.3.5'
 
 setup(name='CheesePrism',
       version=version,
@@ -39,8 +36,6 @@ setup(name='CheesePrism',
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
-      tests_require=test_requires,
-      test_suite="nose.collector",
       entry_points = """\
       [paste.app_factory]
       main = cheeseprism.wsgiapp:main

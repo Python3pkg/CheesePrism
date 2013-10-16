@@ -1,8 +1,10 @@
 -e ./
-pytest
-pytest-cov
-mock
-requests
-wsgi_intercept
+Mock
 coverage
+mock
+pytest
 pytest-capturelog
+pytest-cov
+requests
+stuf
+wsgi_intercept
