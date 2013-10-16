@@ -9,6 +9,7 @@ from path import path
 from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
+from pyramid.settings import asbool
 import jinja2
 import json
 import logging
@@ -17,7 +18,6 @@ import re
 import threading
 import time
 import traceback
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +45,14 @@ class IndexManager(object):
     home_template = template('home.html')
 
     def __init__(self, index_path, template_env=None, arch_baseurl='/index/', urlbase='',
-                 index_data={}, leaf_data={}, error_folder='_errors'):
+                 index_data={}, leaf_data={}, error_folder='_errors', write_index_html=True):
         self.urlbase = urlbase
+        self.write_index_html = write_index_html
         self.arch_baseurl = arch_baseurl
         self.template_env = template_env
         if not self.template_env:
             self.template_env = self.default_env_factory('')
-        self.index_data = index_data.copy()            
+        self.index_data = index_data.copy()
         self.leaf_data = leaf_data.copy()
         self.path = path(index_path)
         self.datafile_path = self.path / self.datafile_name
@@ -77,7 +78,7 @@ class IndexManager(object):
     def move_on_error(error_folder, exc, path):
         logger.error(traceback.format_exc())
         path.rename(error_folder)
-    
+
     @property
     def default_env_factory(self):
         return EnvFactory.from_str
@@ -104,7 +105,10 @@ class IndexManager(object):
         items = self.projects_from_archives()
         home_file = self.path / self.root_index_file
         start = time.time()
-        yield self.write_index_home(home_file, items)
+        if not (self.write_index_html is True):
+            yield None
+        else:
+            yield self.write_index_home(home_file, items)
         yield [self.write_leaf(self.path / key, value) for key, value in items]
         logger.info("Regenerated index: %s", time.time() - start)
 
@@ -144,7 +148,7 @@ class IndexManager(object):
                                  atime=fpath.ctime,
                                  ) for dist, fpath in versions]
                 json.dump(leafdata, jsonout)
-                
+
         leafhome.utime((time.time(), time.time()))
         return leafhome
 
@@ -170,7 +174,7 @@ class IndexManager(object):
         except Exception, e:
             if handle_error is not None:
                 return handle_error(e, path)
-            raise 
+            raise
         raise RuntimeError("Unrecognized extension: %s" %path)
 
     @staticmethod
@@ -192,7 +196,7 @@ class IndexManager(object):
             with open(self.datafile_path, 'w') as root:
                 json.dump(data, root)
             return data
-        
+
     def register_archive(self, arch, registry=None):
         """
         Adds an archive to the master data store (index.json)
@@ -224,7 +228,7 @@ class IndexManager(object):
                 md5 = arch.read_md5().encode('hex')
                 if not arch.exists():
                     del data[md5]
-                    
+
                 if not md5 in data:
                     pkgdata = self.arch_to_add_map(arch)
                     if pkgdata:
@@ -235,7 +239,7 @@ class IndexManager(object):
             logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
             with open(datafile, 'w') as root:
                 json.dump(data, root)
-                
+
         elapsed = time.time() - start
         logger.info("Rebuilt /index.json: %ss" %elapsed)
         return new
@@ -257,27 +261,28 @@ def bulk_update_index(event):
 
 def notify_packages_added(index, new_pkgs, reg=None):
     if reg is None:
-        reg = threadlocal.get_current_registry()    
+        reg = threadlocal.get_current_registry()
     for data in new_pkgs:
         yield reg.notify(event.PackageAdded(index,
                                             name=data['name'],
                                             version=data['version'],
                                             path=index.path / data['filename']))
 
+        
 @subscriber(ApplicationCreated)
 def bulk_update_index_at_start(event):
     reg = event.app.registry
     settings = reg.settings
-    
+
     index = IndexManager.from_settings(settings)
 
     new_pkgs = index.update_data()
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
 
     home_file = index.path / index.root_index_file
-    if not home_file.exists():
+    if index.write_index_html is True and (not home_file.exists() or len(pkg_added)): 
         items = index.projects_from_archives()
-        index.write_index_home(home_file, items)    
+        index.write_index_home(home_file, items)
     return pkg_added
 
 
@@ -312,7 +317,3 @@ class EnvFactory(object):
         choices = [jinja2.PackageLoader('cheeseprism', 'templates/index')]
         if config: [choices.insert(0, loader) for loader in factory.loaders]
         return factory.env_class(loader=jinja2.ChoiceLoader(choices))
-
-
-
-
