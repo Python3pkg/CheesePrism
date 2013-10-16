@@ -10,3 +10,4 @@ tests/test-indexes/*
 /doc/example-index/*
 env*/
 /.ropeproject
+*/.coverage
