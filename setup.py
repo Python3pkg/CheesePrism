@@ -20,7 +20,7 @@ version='0.3.5a1'
 
 setup(name='CheesePrism',
       version=version,
-      description='CheesePrism',
+      description='CheesePrism: your personal cheeseshop',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
         "Programming Language :: Python",
