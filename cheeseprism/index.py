@@ -68,11 +68,15 @@ class IndexManager(object):
             file_root.makedirs()
 
         urlbase = settings.get('cheeseprism.urlbase', '')
+        write_index_html = asbool(settings.get('cheeseprism.write_index_html', 'true'))
         abu = settings.get('cheeseprism.archive.urlbase', '..')
+        template_env = settings.get('cheeseprism.index_templates', '')
+
         return cls(settings['cheeseprism.file_root'],
                    urlbase=urlbase,
                    arch_baseurl=abu,
-                   template_env=settings['cheeseprism.index_templates'])
+                   template_env=template_env,
+                   write_index_html=write_index_html)
 
     @staticmethod
     def move_on_error(error_folder, exc, path):
@@ -268,7 +272,7 @@ def notify_packages_added(index, new_pkgs, reg=None):
                                             version=data['version'],
                                             path=index.path / data['filename']))
 
-        
+
 @subscriber(ApplicationCreated)
 def bulk_update_index_at_start(event):
     reg = event.app.registry
@@ -280,7 +284,7 @@ def bulk_update_index_at_start(event):
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
 
     home_file = index.path / index.root_index_file
-    if index.write_index_html is True and (not home_file.exists() or len(pkg_added)): 
+    if index.write_index_html is True and (not home_file.exists() or len(pkg_added)):
         items = index.projects_from_archives()
         index.write_index_home(home_file, items)
     return pkg_added

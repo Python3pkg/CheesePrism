@@ -29,14 +29,14 @@ class IndexTestCase(unittest.TestCase):
 
     tdir = path(resource_spec('egg:CheesePrism#tests'))
     dummy = here / "dummypackage/dist/dummypackage-0.0dev.tar.gz"
-    
+
     @classmethod
     def get_base(cls):
         return path(resource_spec(cls.index_parent))
 
     @property
     def base(self): return self.get_base()
-    
+
     def make_one(self, index_name='test-index'):
         from cheeseprism import index
         self.count = next(self.counter)
@@ -53,14 +53,14 @@ class IndexTestCase(unittest.TestCase):
         pkgdata, md5 = self.im.register_archive(self.dummypath)
         assert md5 == '3ac58d89cb7f7b718bc6d0beae85c282'
         assert pkgdata
-        
+
         idxjson = self.im.data_from_path(self.im.datafile_path)
-        assert md5 in idxjson 
+        assert md5 in idxjson
         assert idxjson[md5] == pkgdata
 
     def test_write_datafile(self):
         """
-        create and write archive data to index.json 
+        create and write archive data to index.json
         """
         data = self.im.write_datafile(hello='computer')
         assert 'hello' in data
@@ -78,6 +78,13 @@ class IndexTestCase(unittest.TestCase):
         assert data['hello'] == 'operator'
         assert self.im.data_from_path(self.im.datafile_path)['hello'] == 'operator'
 
+    def test_regenerate_index_write_index_html_false(self):
+        im = self.make_one()
+        im.write_index_html = False
+        home, leaves = im.regenerate_all()
+        pth = im.path
+        assert home is None
+        assert not (pth / im.root_index_file).exists()
 
     def test_regenerate_index(self):
         home, leaves = self.im.regenerate_all()
@@ -86,7 +93,7 @@ class IndexTestCase(unittest.TestCase):
         index_name = u'%s-test-index' %self.count
         expected = [(index_name, u'dummypackage'),
                     (u'dummypackage', u'index.html'),
-                    (path(u'dummypackage'), path(u'index.json')),                    
+                    (path(u'dummypackage'), path(u'index.json')),
                     (index_name, u'dummypackage-0.0dev.tar.gz'),
                     (index_name, u'index.html')]
 
@@ -142,7 +149,7 @@ class IndexTestCase(unittest.TestCase):
         pkgs = pkg,
         index = Mock(name='index')
         index.path = self.im.path
-        reg = getreg.return_value = Mock(name='registry')                
+        reg = getreg.return_value = Mock(name='registry')
         out = list(notify_packages_added(index, pkgs))
 
         assert len(out) == 1
@@ -178,7 +185,7 @@ class ClassOrStaticMethods(unittest.TestCase):
     def test_pkginfo_from_file_egg(self):
         """
         .pkginfo_from_file: bdist
-        """                
+        """
         from cheeseprism.index import IndexManager
         assert IndexManager.pkginfo_from_file('blah.egg') is True
 
@@ -186,7 +193,7 @@ class ClassOrStaticMethods(unittest.TestCase):
     def test_pkginfo_from_file_sdist(self):
         """
         .pkginfo_from_file: sdist
-        """        
+        """
         from cheeseprism.index import IndexManager
         for ext in ('.gz','.tgz', '.bz2', '.zip'):
             assert IndexManager.pkginfo_from_file('blah.%s' %ext) is True
@@ -205,8 +212,8 @@ class ClassOrStaticMethods(unittest.TestCase):
         .pkginfo_from_file with no extension
         """
         from cheeseprism.index import IndexManager
-        IndexManager.pkginfo_from_file('adfasdkfha')        
-    
+        IndexManager.pkginfo_from_file('adfasdkfha')
+
     def test_pkginfo_from_file_exc_and_handler(self):
         """
         .pkginfo_from_file with exception and handler
@@ -231,4 +238,3 @@ class ClassOrStaticMethods(unittest.TestCase):
 
 def test_cleanup():
     assert not IndexTestCase.get_base().dirs()
-
