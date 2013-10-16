@@ -34,12 +34,15 @@ def sync_folder(index, folder):
 def update_index(index, reg):
     with utils.benchmark('Update index after sync'):
         new_pkgs = index.update_data()
-        pkg_added = list(notify_packages_added(index, new_pkgs, reg))
+        if index.path.exists(): #for testing
+            with utils.benchmark("New packages notifier: %s" %new_pkgs):
+                pkg_added = list(notify_packages_added(index, new_pkgs, reg))
 
-        if not any((index.datafile_path.exists(), index.home_file.exists())):
-            index.write_index_home(index.projects_from_archives())
+            if not all((index.datafile_path.exists(), index.home_file.exists())):
+                index.write_index_home(index.projects_from_archives())
+                
+            return pkg_added
 
-        return pkg_added
 
 def wait_for_file(fp, sleep=0.2, max_tries=5):
     fp = path(fp)

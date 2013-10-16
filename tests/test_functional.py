@@ -60,6 +60,13 @@ class FunctionalTests(unittest.TestCase):
             res = testapp.get('/index', status=200)
         assert 'WUT' in res.body
 
+    def test_root_thead_pip_sync(self):
+        with patch.dict('os.environ', {'PIP_DOWNLOAD_CACHE': resource_spec(self.pipcache)}):
+            testapp = self.makeone({'cheeseprism.futures':'thread',
+                                    'cheeseprism.pipcache_mirror':'true'})
+            res = testapp.get('/index', status=200)
+        assert 'WUT' in res.body
+
     def test_root_proc(self):
         testapp = self.makeone({'cheeseprism.futures':'process'})
         res = testapp.get('/', status=200)
@@ -74,4 +81,5 @@ class FunctionalTests(unittest.TestCase):
         logger.debug("teardown: %s", self.count)
         dirs = self.base.dirs()
         logger.debug(pprint(dirs))
+        time.sleep(0.02)
         logger.debug(pprint([x.rmtree() for x in dirs]))
