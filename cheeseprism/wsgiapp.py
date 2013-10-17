@@ -1,5 +1,4 @@
 from cheeseprism.auth import BasicAuthenticationPolicy
-from cheeseprism.index import EnvFactory
 from cheeseprism.resources import App
 from pyramid.config import Configurator
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
