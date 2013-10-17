@@ -2,5 +2,5 @@ language: python
 python:
   - "2.7"
   - "pypy"
-install: "pip install -e ./ -r ./test-reqs.txt"
+install: "pip install --pre -e ./ && pip install --pre -r ./test-reqs.txt"
 script: py.test -vv
