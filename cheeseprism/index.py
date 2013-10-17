@@ -4,6 +4,7 @@ Classes, subscribers and functions for dealing with index management
 from . import event
 from .desc import template
 from .desc import updict
+from .jenv import EnvFactory
 from .utils import benchmark
 from functools import partial
 from path import path
@@ -154,12 +155,8 @@ class IndexManager(object):
         return cls(settings['cheeseprism.file_root'],
                    urlbase=urlbase,
                    arch_baseurl=abu,
-<<<<<<< HEAD
                    template_env=env,
-                   executor=executor)
-
-=======
-                   template_env=template_env,
+                   executor=executor,
                    write_index_html=write_index_html)
 
     @staticmethod
@@ -167,7 +164,6 @@ class IndexManager(object):
         logger.error(traceback.format_exc())
         path.rename(error_folder)
 
->>>>>>> master
     @property
     def default_env_factory(self):
         return EnvFactory.from_str
@@ -195,22 +191,14 @@ class IndexManager(object):
 
     def regenerate_all(self):
         items = self.projects_from_archives()
-<<<<<<< HEAD
-        with benchmark('-- wrote index.html'):
-            yield self.write_index_home(items)
-
-        with benchmark('-- regenerated index'):
-            yield [self.write_leaf(self.path / key, value) for key, value in items]
-=======
-        home_file = self.path / self.root_index_file
-        start = time.time()
         if not (self.write_index_html is True):
             yield None
         else:
-            yield self.write_index_home(home_file, items)
-        yield [self.write_leaf(self.path / key, value) for key, value in items]
-        logger.info("Regenerated index: %s", time.time() - start)
->>>>>>> master
+            with benchmark('-- wrote index.html'):
+                yield self.write_index_home(items)
+
+        with benchmark('-- regenerated index'):
+            yield [self.write_leaf(self.path / key, value) for key, value in items]
 
     def write_index_home(self, items):
         logger.info('Write index home: %s', self.home_file)
@@ -248,42 +236,13 @@ class IndexManager(object):
                                  atime=fpath.ctime,
                                  ) for dist, fpath in versions]
                 json.dump(leafdata, jsonout)
-<<<<<<< HEAD
-                leafhome.utime((time.time(), time.time()))
-=======
-
         leafhome.utime((time.time(), time.time()))
->>>>>>> master
         return leafhome
 
     def leaf_values(self, leafname, archive):
         url = str(path(self.arch_baseurl) / archive.name)
         return dict(url=url, name=archive.name)
 
-<<<<<<< HEAD
-=======
-    @classmethod
-    def extension_of(cls, path):
-        match = cls.EXTS.match(str(path))
-        if match:
-            return match.groupdict()['ext']
-
-    @classmethod
-    def pkginfo_from_file(cls, path, handle_error=None):
-        ext = cls.extension_of(path)
-        try:
-            if ext is not None:
-                if ext in set(('.gz','.tgz', '.bz2', '.zip')):
-                    return pkginfo.sdist.SDist(path)
-                elif ext == '.egg':
-                    return pkginfo.bdist.BDist(path)
-        except Exception, e:
-            if handle_error is not None:
-                return handle_error(e, path)
-            raise
-        raise RuntimeError("Unrecognized extension: %s" %path)
-
->>>>>>> master
     @staticmethod
     def data_from_path(datafile):
         datafile = path(datafile)
@@ -319,7 +278,6 @@ class IndexManager(object):
     def update_data(self, datafile=None, pkgdatas=None):
         if datafile is None:
             datafile = self.datafile_path
-<<<<<<< HEAD
 
         archs = self.files if pkgdatas is None else pkgdatas.keys()
         with benchmark("Rebuilt /index.json"):
@@ -339,30 +297,7 @@ class IndexManager(object):
                 logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
                 with open(datafile, 'w') as root:
                     json.dump(data, root)
-=======
-        start = time.time()
-        with self.index_data_lock:
-            data = self.data_from_path(datafile)
-            new = []
-            for arch in self.files:
-                md5 = arch.read_md5().encode('hex')
-                if not arch.exists():
-                    del data[md5]
 
-                if not md5 in data:
-                    pkgdata = self.arch_to_add_map(arch)
-                    if pkgdata:
-                        data[md5] = pkgdata
-                        new.append(pkgdata)
-
-            pkgs = len(set(x['name'] for x in data.values()))
-            logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
-            with open(datafile, 'w') as root:
-                json.dump(data, root)
-
-        elapsed = time.time() - start
-        logger.info("Rebuilt /index.json: %ss" %elapsed)
->>>>>>> master
         return new
 
 
@@ -398,12 +333,6 @@ def notify_packages_added(index, new_pkgs, reg=None):
 @subscriber(ApplicationCreated)
 def bulk_update_index_at_start(event):
     reg = event.app.registry
-<<<<<<< HEAD
-=======
-    settings = reg.settings
-
-    index = IndexManager.from_settings(settings)
->>>>>>> master
 
     index = IndexManager.from_registry(reg)
     logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
@@ -412,45 +341,8 @@ def bulk_update_index_at_start(event):
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
     index.write_index_home(index.projects_from_archives())
 
-<<<<<<< HEAD
-    logger.info('-- Package inspection finished in %ss', time.time() - start)
-=======
     home_file = index.path / index.root_index_file
     if index.write_index_html is True and (not home_file.exists() or len(pkg_added)):
         items = index.projects_from_archives()
         index.write_index_home(home_file, items)
->>>>>>> master
     return pkg_added
-
-
-class EnvFactory(object):
-    env_class = jinja2.Environment
-    def __init__(self, config):
-        self.config = config
-
-    @property
-    def loaders(self):
-        if self.config:
-            loaders = self.config.split(' ')
-            for loader in loaders:
-                spec = loader.split(':')
-                if len(spec) == 1:
-                    yield jinja2.FileSystemLoader(spec); continue
-
-                type_, spec = spec
-                if type_ == "file":
-                    yield jinja2.FileSystemLoader(spec); continue
-
-                if type_ == 'pkg':
-                    spec = spec.split('#')
-                    if len(spec) == 1: yield jinja2.PackageLoader(spec[0])
-                    else: yield jinja2.PackageLoader(*spec)
-                    continue
-                raise RuntimeError('Loader type not found: %s %s' %(type_, spec))
-
-    @classmethod
-    def from_str(cls, config=None):
-        factory = cls(config)
-        choices = [jinja2.PackageLoader('cheeseprism', 'templates/index')]
-        if config: [choices.insert(0, loader) for loader in factory.loaders]
-        return factory.env_class(loader=jinja2.ChoiceLoader(choices))

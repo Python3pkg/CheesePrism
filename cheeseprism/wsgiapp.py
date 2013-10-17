@@ -1,3 +1,4 @@
+from .jenv import EnvFactory
 from cheeseprism.auth import BasicAuthenticationPolicy
 from cheeseprism.resources import App
 from functools import partial
@@ -5,9 +6,9 @@ from pyramid.config import Configurator
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
 from pyramid.settings import asbool
 from pyramid_jinja2 import renderer_factory
-import multiprocessing
 import futures
 import logging
+import multiprocessing
 
 logger = logging.getLogger(__name__)
 
