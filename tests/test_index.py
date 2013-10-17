@@ -80,6 +80,14 @@ class IndexTestCase(unittest.TestCase):
         assert data['hello'] == 'operator'
         assert self.im.data_from_path(self.im.datafile_path)['hello'] == 'operator'
 
+    def test_regenerate_index_write_index_html_false(self):
+        im = self.make_one()
+        im.write_index_html = False
+        home, leaves = im.regenerate_all()
+        pth = im.path
+        assert home is None
+        assert not (pth / im.root_index_file).exists()
+
     def test_regenerate_index(self):
         self.im = self.make_one()
         home, leaves = self.im.regenerate_all()

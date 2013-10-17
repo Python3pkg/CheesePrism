@@ -12,3 +12,5 @@ env*/
 /.ropeproject
 /cheeseprism/.coverage
 /.coverage*
+*/.coverage
+

@@ -17,11 +17,11 @@ requires = ['Jinja2',
             'requests',
             'pip']
 
-version='0.3'
+version='0.4.0a1'
 
 setup(name='CheesePrism',
       version=version,
-      description='CheesePrism',
+      description='CheesePrism: your personal cheeseshop',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
         "Programming Language :: Python",
@@ -37,7 +37,6 @@ setup(name='CheesePrism',
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
-      test_suite="nose.collector",
       entry_points = """\
       [paste.app_factory]
       main = cheeseprism.wsgiapp:main
