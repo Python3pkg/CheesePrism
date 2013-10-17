@@ -11,3 +11,4 @@ tests/test-indexes/*
 env*/
 /.ropeproject
 /cheeseprism/.coverage
+/.coverage*
