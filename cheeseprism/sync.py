@@ -1,7 +1,6 @@
 from . import utils
 from .index import IndexManager
 from .index import notify_packages_added
-from contextlib import contextmanager
 from path import path
 from threading import Thread
 import logging
@@ -72,7 +71,7 @@ def sync_cache(index, registry):
 
 def pip(config):
     index = IndexManager.from_registry(config.registry)
-    thread = Thread(target=sync_cache, args=(index, config.registry))
+    thread = Thread(target=sync_cache, args=(index, config.registry), name='pip-updater')
     thread.start()
 
 
