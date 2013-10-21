@@ -42,7 +42,7 @@ def main(global_config, **settings):
     config.add_static_view('static', 'static')
     config.include('.request')
     config.scan('.views')
-    config.scan('.index')
+    config.include('.index')
     config.add_route('package', 'package/{name}/{version}')
     config.add_view('.views.from_pypi', route_name='package')
 

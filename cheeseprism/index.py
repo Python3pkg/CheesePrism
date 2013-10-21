@@ -330,8 +330,8 @@ def notify_packages_added(index, new_pkgs, reg=None):
                                             path=index.path / data['filename']))
 
 
-@subscriber(ApplicationCreated)
 def bulk_update_index_at_start(event):
+    logger.info("--> Checking and updating index")
     reg = event.app.registry
 
     index = IndexManager.from_registry(reg)
@@ -344,5 +344,21 @@ def bulk_update_index_at_start(event):
     home_file = index.path / index.root_index_file
     if index.write_index_html is True and (not home_file.exists() or len(pkg_added)):
         items = index.projects_from_archives()
-        index.write_index_home(home_file, items)
+        index.write_index_home(items)
     return pkg_added
+
+
+def async_bulk_update_at_start(event):
+    from threading import Thread
+    logger.info("Spawning thread to handle bulk update on start")
+    Thread(target=bulk_update_index_at_start,
+           args=(event,),
+           name='bulk-update-on-start').start()
+
+
+def includeme(config):
+    config.scan(__name__)
+    if asbool(config.registry.settings.get('cheeseprism.async_restart', False)):
+        config.add_subscriber(async_bulk_update_at_start, ApplicationCreated)
+    else:
+        config.add_subscriber(bulk_update_index_at_start, ApplicationCreated)

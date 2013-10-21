@@ -21,6 +21,8 @@ class FunctionalTests(unittest.TestCase):
     pipcache = "egg:CheesePrism#tests/pipcache"
     devini = "egg:CheesePrism#development.ini"
 
+    dummy = here / "dummypackage/dist/dummypackage-0.0dev.tar.gz"
+
     @classmethod
     def get_base(cls):
         return path(resource_spec(cls.index_parent))
@@ -32,7 +34,7 @@ class FunctionalTests(unittest.TestCase):
         self.dummy.copy(self.testdir)
         self.dummypath = self.testdir / self.dummy.name
 
-    def makeone(self, xtra=None, index_name='test-func-index'):
+    def makeone(self, xtra=None, index_name='test-func-index', count=None):
         from cheeseprism.wsgiapp import main
         cp = ConfigParser(dict(here=self.base))
 
@@ -40,7 +42,10 @@ class FunctionalTests(unittest.TestCase):
             cp.readfp(fp)
 
         defaults = dict((x, cp.get('DEFAULT', x)) for x in cp.defaults())
-        index_path = self.base / ("%s-%s" %(self.count, index_name))
+
+        count = count is None and self.count or count
+        self.idxpath = index_path = self.base / ("%s-%s" %(count, index_name))
+
         settings = {
             'cheeseprism.file_root': index_path,
             'cheeseprism.data_json': 'data.json'
@@ -51,6 +56,19 @@ class FunctionalTests(unittest.TestCase):
 
         from webtest import TestApp
         return TestApp(app)
+
+    def test_async_bulkupdate(self):
+        idxname = 'async_bulk_up'
+        idxpath = self.base / "0-" + idxname
+        idxpath.mkdir_p()
+        
+        self.dummy.copy(idxpath)
+
+        testapp = self.makeone({'cheeseprism.async_restart':'true'},
+                               index_name=idxname, count=0)
+        time.sleep(0.02)
+        res = testapp.get('/index', status=200)
+        assert 'dummy' in res.body
 
     def test_root_proc_pip_sync(self):
         with patch.dict('os.environ', {'PIP_DOWNLOAD_CACHE': resource_spec(self.pipcache)}):
