@@ -13,6 +13,17 @@ borrows heavily from `BasketWeaver
 management tasks.
 
 
+Why?
+====
+
+There are probably better options that are more actively maintained (devpi?). 
+
+Cheeseprism mainly excels at turning a folder full of tarballs into
+something you can pip install against. And the pip cache syncing is
+handy.
+
+
+
 Running
 =======
 
@@ -22,21 +33,9 @@ Dev
 Install
 ~~~~~~~
 
-There are 3 main ways to get your CheesePrism up and running depending
+There are 2 main ways to get your CheesePrism up and running depending
 on your particular needs.
 
- 1. **'Strap it**: 
-
-    Download the most current strap file that contains
-    CheesePrism and all of it's dependencies from `the strappery
-    <https://github.com/whitmo/Strap/downloads>`_::
-
-     $ curl https://github.com/downloads/whitmo/Strap/CheesePrism.strap.pybundle
-     $ python CheesePrism.strap.pybundle new-prism-env
-
-
-    If you are already in an activated virtualenv, the prism is
-    installed there.
 
  2. Pip install the package from pypi:
 
@@ -62,11 +61,11 @@ If you have installed the source, to run the tests, first install the
 test requirements::
  
  $ cd CheesePrism
- $ pip install -r tests-require.txt
+ $ pip install -r tests-reqs.txt
  
 Then::
 
- $ nosetests -vv
+ $ py.test
 
 This will run tests and spit out coverage.
 
@@ -77,7 +76,7 @@ Run
 The following will start the application and a static file server for
 `CheesePrism` suitable for testing and development::
 
- $ paster serve development.ini
+ $ pserve development.ini
 
 You will need to install `PasteScript <http://pythonpaste.org/script/>`_
 in order to run this command (``easy_install PasteScript``).
@@ -123,13 +122,14 @@ Use the prod.ini (edited for your setup) for simplest serving. Be sure
 to remove such things as ``pyramid.includes = pyramid_debugtoolbar``
 if security is a concern::
 
- $ paster serve prod.ini
+ $ pserve prod.ini
 
 Sane people use something like upstart or `supervisord <supervisord.org>`_ to manage this process.
 
 .. todo:
   ini config generation script
-                                   
+
+
 
 How to use
 ==========
@@ -169,8 +169,9 @@ The you can upload a source ala::
 basic auth scheme.  This mainly exists for the purpose of grabbing the
 identity of who puports to be uploading a package, rather than any
 actual security.  If you need more, it should provide a starting point
-for extension (see `pyramid documentation <http://docs.pylonsproject.org/en/latest/docs/pyramid.html>`_ 
-for more information on extending pyramid apps).
+for extension (see `pyramid documentation
+<http://docs.pylonsproject.org/en/latest/docs/pyramid.html>`_ for more
+information on extending pyramid apps).
 
 
 Install from your index
@@ -205,6 +206,9 @@ There are 3 main ways to load files:
     the index. Currently this utilizes some state change on GET but 
     does remain idempotent (to be fixed soon).
 
+See **Pip cache syncing** below for a final way to populate your
+index.
+
 
 JSON API
 --------
@@ -221,6 +225,20 @@ archive. Let's imagine our index only holds webob::
                                         u'name': u'WebOb',
                                         u'version': u'1.2b2'}}
 
+There is a per package api also (say mock is in our index)::
+
+  $ curl GET http://mycheese/index/mock/index.json
+
+It returns a list of the available versions for the package::
+
+  [{"version": "1.0.1", 
+    "name": "mock", 
+    "mtime": 1381377142.0, 
+    "atime": 1381377142.0, 
+    "ctime": 1381377142.0, 
+    "filename": "mock-1.0.1.tar.gz"}]
+
+
 HTTP API
 --------
 
@@ -229,6 +247,62 @@ that will soon go away.  Provided ``name`` and ``version`` exist in PyPi, the
 following will download the file from pypi and register it with the index::
 
  $ curl GET http://mycheese/package/{name}/{version}
+
+
+Advance Feature Configuration
+=============================
+
+Cheeseprism has a few knobs that might help adapt it to your usecase.
+
+
+Pip cache syncing
+-----------------
+
+Occasionally we find ourself needing to populate a virtualenv and
+lacking network access.  Cheeseprism includes an optional that will,
+upon starting cheeseprism, copy and index all packages in your
+`PIP_DOWNLOAD_CACHE` folder, thus making them available to
+install. Add this line to your ini::
+
+  cheeseprism.pipcache_mirror=true
+
+
+Configure Concurrency for index management
+------------------------------------------
+
+Under the hood for highly repetive tasks, Cheeseprism uses `futures`
+to speed certain operations.
+
+The executor may be configured like so::
+
+  cheeseprism.futures = [thread|process]
+
+
+The number of workers may be configured by::
+
+  cheeseprism.futures.workers = 12  
+
+
+By default, Cheeseprism uses the `ThreadExecutor` w/ 10 threads. Using
+the `process` executor is recommended if you have a large number of
+packages. The `process` executor defaults to the number of cores
+available + 1.
+
+
+Skip writing index.html
+-----------------------
+
+Use directory listing in nginx renderers has some advantages over
+using the Cheeseprism generated index (byte counts, see all the files,
+etc, faster index updating). This configuration option tells
+CheesePrism to skip creating the index.html::
+
+  cheeseprism.write_index_html = false
+ 
+
+
+
+
 
 
 Future
@@ -265,7 +339,7 @@ Contact / Wanna get involved?
 
 Pull requests welcome! 
 
-I'm on freenode at *#pyramid*, *#surveymonkey*, or *#distutils* as
+I'm on freenode at *#pyramid*, or *#distutils* as
 ``whit`` most days if you have questions or comments.
 
 
