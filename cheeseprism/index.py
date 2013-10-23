@@ -176,10 +176,10 @@ class IndexManager(object):
         with benchmark('-- collected projects'):
             projects = {}
             paths = (self.path / item for item in self.files)
-            with self.executor() as exe:
-                results = [info for info in exe.map(pki_ff, paths)]
-                for itempath, info in results:
-                    projects.setdefault(info.name, []).append((info, itempath))
+
+            results = [info for info in self.executor.map(pki_ff, paths)]
+            for itempath, info in results:
+                projects.setdefault(info.name, []).append((info, itempath))
 
         with benchmark('-- sorted projects'):
             return sorted(projects.items())
@@ -284,14 +284,14 @@ class IndexManager(object):
             with self.index_data_lock:
                 data = self.data_from_path(datafile)
                 new = []
-                with self.executor() as exe:
-                    read = self.archive_tool
-                    for md5, pkgdata in exe.map(read,
-                                                ((arch, data) for arch in archs)):
+                exe = self.executor
 
-                        if pkgdata is not None:
-                            data[md5] = pkgdata
-                            new.append(pkgdata)
+                read = self.archive_tool
+                archdata = ((arch, data) for arch in archs)
+                for md5, pkgdata in exe.map(read, archdata):
+                    if pkgdata is not None:
+                        data[md5] = pkgdata
+                        new.append(pkgdata)
 
                 pkgs = len(set(x['name'] for x in data.values()))
                 logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))

@@ -51,7 +51,7 @@ class CPDummyRequest(testing.DummyRequest):
     def index(self):
         return index.IndexManager(self.file_root,
                                   template_env=self.index_templates,
-                                  executor=partial(futures.ThreadPoolExecutor, max_workers=4))
+                                  executor=futures.ThreadPoolExecutor(max_workers=4))
 
     @reify
     def response(self):

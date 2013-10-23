@@ -41,7 +41,7 @@ class IndexTestCase(unittest.TestCase):
     def make_one(self, index_name='test-index'):
         from cheeseprism import index
         self.count = next(self.counter)
-        executor = partial(futures.ThreadPoolExecutor, 4)
+        executor = futures.ThreadPoolExecutor(1)
         index_path = self.base / ("%s-%s" %(self.count, index_name))
         idx = index.IndexManager(index_path, executor=executor)
         self.dummy.copy(idx.path)
