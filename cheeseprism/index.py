@@ -150,7 +150,7 @@ class IndexManager(object):
         write_index_html = asbool(settings.get('cheeseprism.write_index_html', 'true'))
         abu = settings.get('cheeseprism.archive.urlbase', '..')
         idx_tmplt = settings.get('cheeseprism.index_templates', '')
-        template_env = EnvFactory.from_str(idx_tmplt)
+        env = EnvFactory.from_str(idx_tmplt)
 
         return cls(settings['cheeseprism.file_root'],
                    urlbase=urlbase,
