@@ -39,7 +39,7 @@ def update_index(index, reg):
 
             if not all((index.datafile_path.exists(), index.home_file.exists())):
                 index.write_index_home(index.projects_from_archives())
-                
+
             return pkg_added
 
 
@@ -66,7 +66,11 @@ def sync_cache(index, registry):
     wait_for_file(index.path)
     wait_for_file(index.datafile_path)
     sync_folder(index, pdc)
-    update_index(index, registry)
+    try:
+        update_index(index, registry)
+    except :
+        logger.exception("sync_cache:update_index failed")
+
 
 
 def pip(config):
