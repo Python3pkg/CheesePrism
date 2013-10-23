@@ -1,15 +1,20 @@
-0.2a3/4
+CHANGES
+=======	
+
+0.4.0a2
 =======
 
 2013-03-21  Whit  <whit@surveymonkey.com>
 
- * Cleanup logging
- * Test cleanups and fixes
+	* thread and process concurrency via futures for index building
+	* optional pip cache syncing
+	* option to not write index.html (for use with servers w/ directory list ala nginx)
+	* various performance improvements (thanks @bbinet!)
 
 
 0.2a1
 =====
-	
+
 2012-10-31  whit  <whit@surveymonkey.com>:
 
  * Filter non-source distribution downloads from pypi
@@ -17,6 +22,7 @@
  * Index regeneration is now package by package
  * initial work on unified 'datafile' handling via transaction
  * Make 'regenerate_all' rebuild the datafile (albeit inefficiently)
+
 	
 0.1a1
 =====
