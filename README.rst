@@ -283,10 +283,9 @@ The number of workers may be configured by::
   cheeseprism.futures.workers = 12  
 
 
-By default, Cheeseprism uses the `ThreadExecutor` w/ 10 threads. Using
-the `process` executor is recommended if you have a large number of
-packages. The `process` executor defaults to the number of cores
-available + 1.
+By default, Cheeseprism uses the `ThreadExecutor` w/ 10
+threads. Currently the `process` implementation is experimental and
+may have unexpected issues depending on what server you are using.
 
 
 Skip writing index.html
@@ -298,9 +297,6 @@ etc, faster index updating). This configuration option tells
 CheesePrism to skip creating the index.html::
 
   cheeseprism.write_index_html = false
- 
-
-
 
 
 
@@ -308,7 +304,8 @@ CheesePrism to skip creating the index.html::
 Future
 ======
 
-Some features we plan to implement in the near future:
+Really, the future is likely an different pypi mirror like devpi.
+Some features we thought about implementing:
 
  * **Multi-index support**:  The general idea is that you can evolve
    indexes rather like requirements files but by explicit limiting of
@@ -339,7 +336,7 @@ Contact / Wanna get involved?
 
 Pull requests welcome! 
 
-I'm on freenode at *#pyramid*, or *#distutils* as
-``whit`` most days if you have questions or comments.
+I'm on freenode at *#pyramid*, ``whit`` most days if you have
+questions or comments.
 
 
