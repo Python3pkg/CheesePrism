@@ -336,7 +336,7 @@ def bulk_update_index_at_start(event):
 
     index = IndexManager.from_registry(reg)
     logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
-    start = time.time()
+
     new_pkgs = index.update_data()
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
     index.write_index_home(index.projects_from_archives())
@@ -349,7 +349,11 @@ def bulk_update_index_at_start(event):
 
 
 def async_bulk_update_at_start(event):
-    from threading import Thread
+    reg = event.app.registry
+    if reg['cp.executor_type'] == 'process':
+        from multiprocessing import Process as Thread
+    else:
+        from threading import Thread
     logger.info("Spawning thread to handle bulk update on start")
     Thread(target=bulk_update_index_at_start,
            args=(event,),
