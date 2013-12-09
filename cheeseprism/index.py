@@ -12,7 +12,6 @@ from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
 from pyramid.settings import asbool
-import jinja2
 import json
 import logging
 import pkginfo
