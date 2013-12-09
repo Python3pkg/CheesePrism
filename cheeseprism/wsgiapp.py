@@ -70,7 +70,10 @@ def setup_workers(registry, handler=sig_handler):
     are registered.
     """
     settings = registry.settings
-    executor_type = settings.get('cheeseprism.futures', 'thread')
+
+    registry['cp.executor_type'] = executor_type =\
+      settings.get('cheeseprism.futures', 'thread')
+
     executor = executor_type != 'process' and futures.ThreadPoolExecutor \
       or futures.ProcessPoolExecutor
 
