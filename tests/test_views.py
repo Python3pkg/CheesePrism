@@ -1,7 +1,7 @@
 from cheeseprism import index
 from cheeseprism.resources import App
 from contextlib import contextmanager
-from functools import partial
+from cheeseprism import utils
 from mock import Mock
 from mock import patch
 from nose.tools import raises
@@ -16,6 +16,7 @@ import futures
 import itertools
 import unittest
 
+
 here = path(__file__).parent
 
 
@@ -24,6 +25,14 @@ class CPDummyRequest(testing.DummyRequest):
     counter = itertools.count()
     env = None
     _index_data = {}
+    _namer = None
+
+    @reify
+    def namer(self):
+        if self._namer is None:
+            from cheeseprism.utils import secure_filename
+            return secure_filename
+        return self._namer
 
     @property
     def userid(self):
