@@ -289,6 +289,22 @@ class ViewTests(unittest.TestCase):
             assert self.event_results['PackageAdded'][0].name == pkif.return_value.name
         assert res.headers == {'X-Swalow-Status': 'SUCCESS'}
 
+
+    @patch('path.path.write_bytes')
+    def test_upload_w_filter(self, wb):
+        from cheeseprism.views import upload
+        self.setup_event()
+        context, request = self.base_cr
+        request.method = 'POST'
+        request.POST['content'] = FakeFS(path('dummypackage/dist/dummypackage-0.0dev.tar.gz'))
+        with patch('cheeseprism.index.IndexManager.pkginfo_from_file',
+                   return_value=stuf(name='dummycode', version='0.0dev')) as pkif:
+            res = upload(context, request)
+            assert pkif.called
+            assert 'PackageAdded' in self.event_results
+            assert self.event_results['PackageAdded'][0].name == pkif.return_value.name
+        assert res.headers == {'X-Swalow-Status': 'SUCCESS'}
+
     def test_from_requirements_GET(self):
         from cheeseprism.views import from_requirements
         context, request = self.base_cr
