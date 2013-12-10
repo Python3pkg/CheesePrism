@@ -8,3 +8,4 @@ pytest-cov
 requests
 stuf
 wsgi_intercept
+nose
