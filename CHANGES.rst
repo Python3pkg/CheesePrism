@@ -1,6 +1,16 @@
 CHANGES
 =======	
 
+	
+0.4.0a3
+=======
+
+2013-12-11  Whit  <whit@surveymonkey.com>
+	* update docs
+	* deprecate process based concurrency until a better way is found
+	* add a way to config different callables for naming an upload
+
+	
 0.4.0a2
 =======
 
