@@ -17,7 +17,7 @@ requires = ['Jinja2',
             'requests',
             'pip']
 
-version='0.4.0a1'
+version='0.4.0a2'
 
 setup(name='CheesePrism',
       version=version,
@@ -33,7 +33,7 @@ setup(name='CheesePrism',
       author_email='whit-at-surveymonkey-dot-com',
       url='https://github.com/whitmo/CheesePrism',
       keywords='web pyramid pylons',
-      packages=find_packages(),
+      packages=find_packages(exclude=['tests']),
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,

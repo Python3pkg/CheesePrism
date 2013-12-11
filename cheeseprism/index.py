@@ -12,7 +12,6 @@ from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
 from pyramid.settings import asbool
-import jinja2
 import json
 import logging
 import pkginfo
@@ -150,7 +149,7 @@ class IndexManager(object):
         write_index_html = asbool(settings.get('cheeseprism.write_index_html', 'true'))
         abu = settings.get('cheeseprism.archive.urlbase', '..')
         idx_tmplt = settings.get('cheeseprism.index_templates', '')
-        template_env = EnvFactory.from_str(idx_tmplt)
+        env = EnvFactory.from_str(idx_tmplt)
 
         return cls(settings['cheeseprism.file_root'],
                    urlbase=urlbase,
@@ -176,10 +175,10 @@ class IndexManager(object):
         with benchmark('-- collected projects'):
             projects = {}
             paths = (self.path / item for item in self.files)
-            with self.executor() as exe:
-                results = [info for info in exe.map(pki_ff, paths)]
-                for itempath, info in results:
-                    projects.setdefault(info.name, []).append((info, itempath))
+
+            results = [info for info in self.executor.map(pki_ff, paths)]
+            for itempath, info in results:
+                projects.setdefault(info.name, []).append((info, itempath))
 
         with benchmark('-- sorted projects'):
             return sorted(projects.items())
@@ -284,14 +283,14 @@ class IndexManager(object):
             with self.index_data_lock:
                 data = self.data_from_path(datafile)
                 new = []
-                with self.executor() as exe:
-                    read = self.archive_tool
-                    for md5, pkgdata in exe.map(read,
-                                                ((arch, data) for arch in archs)):
+                exe = self.executor
 
-                        if pkgdata is not None:
-                            data[md5] = pkgdata
-                            new.append(pkgdata)
+                read = self.archive_tool
+                archdata = ((arch, data) for arch in archs)
+                for md5, pkgdata in exe.map(read, archdata):
+                    if pkgdata is not None:
+                        data[md5] = pkgdata
+                        new.append(pkgdata)
 
                 pkgs = len(set(x['name'] for x in data.values()))
                 logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
@@ -336,7 +335,7 @@ def bulk_update_index_at_start(event):
 
     index = IndexManager.from_registry(reg)
     logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
-    start = time.time()
+
     new_pkgs = index.update_data()
     pkg_added = list(notify_packages_added(index, new_pkgs, reg))
     index.write_index_home(index.projects_from_archives())
@@ -349,7 +348,11 @@ def bulk_update_index_at_start(event):
 
 
 def async_bulk_update_at_start(event):
-    from threading import Thread
+    reg = event.app.registry
+    if reg['cp.executor_type'] == 'process':
+        from multiprocessing import Process as Thread
+    else:
+        from threading import Thread
     logger.info("Spawning thread to handle bulk update on start")
     Thread(target=bulk_update_index_at_start,
            args=(event,),

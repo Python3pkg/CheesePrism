@@ -1,12 +1,13 @@
 from cheeseprism import event
 from cheeseprism import pipext
 from cheeseprism import resources
-from cheeseprism import utils
 from cheeseprism.rpc import PyPi
 from path import path
 from pyramid.httpexceptions import HTTPFound
 from pyramid.i18n import TranslationStringFactory
+from pyramid.path import DottedNameResolver as dnr
 from pyramid.view import view_config
+from pyramid_jinja2 import renderer_factory
 from urllib2 import HTTPError
 from urllib2 import URLError
 from webob import exc
@@ -15,6 +16,7 @@ import requests
 import tempfile
 
 
+resolve = dnr(None).maybe_resolve
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +30,6 @@ def instructions(context, request):
 
 @view_config(name='index', renderer='index/home.html', context=resources.App)
 def index_view(context, request):
-    #folders = request.index.path.dirs()
     index = request.index
     data = index.index_data.copy()
     items = index.projects_from_archives()
@@ -48,7 +49,7 @@ def upload(context, request):
 
         fieldstorage = request.POST['content']
         filename = fieldstorage.filename
-        dest = path(request.file_root) / utils.secure_filename(filename)
+        dest = path(request.file_root) / request.namer(filename)
 
         dest.write_bytes(fieldstorage.file.read())
         try:
@@ -167,3 +168,17 @@ def from_requirements(context, request):
 
         return HTTPFound('/load-requirements')
     return {}
+
+
+def includeme(config):
+    config.scan(__name__)
+    config.add_route('package', 'package/{name}/{version}')
+    config.add_view('.views.from_pypi', route_name='package')
+    config.add_static_view('static', 'static')
+    config.include('pyramid_jinja2')
+    config.add_renderer('.html', renderer_factory)
+
+    namer = resolve(config.registry.settings.get('cheeseprism.namer', 'cheeseprism.utils.secure_filename'))
+    assert namer and callable(namer), "Issue with namer: %s" %namer
+    config.registry['cheeseprism.namer'] = namer
+    config.add_request_method(lambda req: namer, name='namer', reify=True)

@@ -82,6 +82,14 @@ def secure_filename(filename):
     return filename
 
 
+def strip_master(filename):
+    """
+    Create a secure filename and remove the string '-master'
+    """
+    filename = secure_filename(filename)
+    return filename.replace('-master', '')
+
+
 class benchmark(object):
     """
     from DaBeaz http://bit.ly/15nNrlF
