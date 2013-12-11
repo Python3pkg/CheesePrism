@@ -1,7 +1,7 @@
 from cheeseprism import index
+from cheeseprism import utils
 from cheeseprism.resources import App
 from contextlib import contextmanager
-from cheeseprism import utils
 from mock import Mock
 from mock import patch
 from nose.tools import raises
@@ -16,75 +16,7 @@ import futures
 import itertools
 import unittest
 
-
 here = path(__file__).parent
-
-
-class CPDummyRequest(testing.DummyRequest):
-    test_dir = None
-    counter = itertools.count()
-    env = None
-    _index_data = {}
-    _namer = None
-
-    @reify
-    def namer(self):
-        if self._namer is None:
-            from cheeseprism.utils import secure_filename
-            return secure_filename
-        return self._namer
-
-    @property
-    def userid(self):
-        return 'bob'
-
-    @property
-    def settings(self):
-        return {}
-
-    @property
-    def file_root(self):
-        test_dir = getattr(self, 'test_dir')
-        if test_dir is None:
-            test_dir = '%s-view-tests' %next(self.counter)
-            self.test_dir = test_dir = path(__file__).parent / "test-indexes" / test_dir
-        return test_dir
-
-    @property
-    def index_templates(self):
-        if self.env is None:
-            self.env = index.EnvFactory.from_str()
-        return self.env
-
-    @property
-    def index(self):
-        return index.IndexManager(self.file_root,
-                                  template_env=self.index_templates,
-                                  executor=futures.ThreadPoolExecutor(max_workers=4))
-
-    @reify
-    def response(self):
-        return DummyResponse()
-
-    @reify
-    def index_data_path(self):
-        return self.file_root / 'index.json'
-
-    @reify
-    def index_data(self):
-        return self._index_data
-
-
-class DummyResponse(object):
-    def __init__(self):
-        self.headers = {}
-
-
-class FakeFS(object):
-    def __init__(self, path, body="Some gzip binary"):
-        self.filename = path.name
-        self.file = Mock()
-        self.file.read.return_value = body
 
 
 def test_instructions():
@@ -110,10 +42,14 @@ class ViewTests(unittest.TestCase):
     def tearDown(self):
         self.event_results = None
         testing.tearDown()
+        CPDummyRequest._namer = None
         if CPDummyRequest.test_dir is not None:
             CPDummyRequest.test_dir.rmtree()
             CPDummyRequest.test_dir = None
         CPDummyRequest._index_data = {}
+        for d in CPDummyRequest.cleanup:
+            d.rmtree_p()
+        CPDummyRequest.cleanup = []
 
     @patch('cheeseprism.rpc.PyPi.search')
     def test_find_package(self, search_pypi):
@@ -193,7 +129,6 @@ class ViewTests(unittest.TestCase):
         from_pypi: test catching urlerror
         """
         request = self.package_request(pd)
-        request.file_root.mkdir()
         with patch('requests.get') as get:
             resp = get.return_value = Mock('response')
             resp.content = PipExtBase.dists['dp'].bytes()
@@ -208,7 +143,6 @@ class ViewTests(unittest.TestCase):
         from_pypi: test catching urlerror
         """
         request = self.package_request(pd)
-        request.file_root.mkdir()
         with patch('requests.get') as get:
             resp = get.return_value = Mock('response')
             resp.content = PipExtBase.dists['dp'].bytes()
@@ -298,20 +232,25 @@ class ViewTests(unittest.TestCase):
             assert self.event_results['PackageAdded'][0].name == pkif.return_value.name
         assert res.headers == {'X-Swalow-Status': 'SUCCESS'}
 
-
-    @patch('path.path.write_bytes')
-    def test_upload_w_filter(self, wb):
+    def test_upload_w_rename(self):
         from cheeseprism.views import upload
         self.setup_event()
         context, request = self.base_cr
+
+        request._namer = utils.strip_master
         request.method = 'POST'
-        request.POST['content'] = FakeFS(path('dummypackage/dist/dummypackage-0.0dev.tar.gz'))
+        request.POST['content'] = FakeFS(path('mastertest-0.0-master.tar.gz'))
+
+        def test_pkif(p, moe):
+            assert p.basename() == u'mastertest-0.0.tar.gz'
+            return stuf(name='mastertest', version='0.0-master')
+
         with patch('cheeseprism.index.IndexManager.pkginfo_from_file',
-                   return_value=stuf(name='dummycode', version='0.0dev')) as pkif:
+                   side_effect=test_pkif) as pkif:
+
             res = upload(context, request)
             assert pkif.called
-            assert 'PackageAdded' in self.event_results
-            assert self.event_results['PackageAdded'][0].name == pkif.return_value.name
+
         assert res.headers == {'X-Swalow-Status': 'SUCCESS'}
 
     def test_from_requirements_GET(self):
@@ -346,3 +285,73 @@ def mock_downloader():
         dler.errors = ('error',)
         dl.req_set_from_file.return_value = (dl, Mock(name='finder'))
         yield dl
+
+
+class DummyResponse(object):
+    def __init__(self):
+        self.headers = {}
+
+
+class FakeFS(object):
+    def __init__(self, path, body="Some gzip binary"):
+        self.filename = path.name
+        self.file = Mock()
+        self.file.read.return_value = body
+
+
+class CPDummyRequest(testing.DummyRequest):
+    test_dir = None
+    counter = itertools.count()
+    env = None
+    _index_data = {}
+    _namer = None
+    cleanup = []
+
+    @reify
+    def namer(self):
+        if self._namer is None:
+            from cheeseprism.utils import secure_filename
+            return secure_filename
+        return self._namer
+
+    @property
+    def userid(self):
+        return 'bob'
+
+    @property
+    def settings(self):
+        return {}
+
+    @property
+    def file_root(self):
+        test_dir = getattr(self, 'test_dir')
+        if test_dir is None:
+            test_dir = '%s-view-tests' %next(self.counter)
+            self.test_dir = test_dir = path(__file__).parent / "test-indexes" / test_dir
+            self.test_dir.mkdir_p()
+            self.cleanup.append(test_dir)
+        return self.test_dir
+
+    @property
+    def index_templates(self):
+        if self.env is None:
+            self.env = index.EnvFactory.from_str()
+        return self.env
+
+    @property
+    def index(self):
+        return index.IndexManager(self.file_root,
+                                  template_env=self.index_templates,
+                                  executor=futures.ThreadPoolExecutor(max_workers=4))
+
+    @reify
+    def response(self):
+        return DummyResponse()
+
+    @reify
+    def index_data_path(self):
+        return self.file_root / 'index.json'
+
+    @reify
+    def index_data(self):
+        return self._index_data
