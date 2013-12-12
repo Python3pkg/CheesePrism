@@ -11,6 +11,7 @@ from path import path
 from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
+from pyramid.path import DottedNameResolver as dnr
 from pyramid.settings import asbool
 import json
 import logging
@@ -359,8 +360,17 @@ def async_bulk_update_at_start(event):
            name='bulk-update-on-start').start()
 
 
+resolve = dnr(None).maybe_resolve
+preup_key = 'cheeseprism.preupdate'
+
+def noop(*args, **kw):
+    return 
+
 def includeme(config):
     config.scan(__name__)
+    preup = resolve(config.registry.settings.get(preup_key, 'cheeseprism.index.noop'))
+    if preup:
+        config.registry[preup_key] = preup
     if asbool(config.registry.settings.get('cheeseprism.async_restart', False)):
         config.add_subscriber(async_bulk_update_at_start, ApplicationCreated)
     else:

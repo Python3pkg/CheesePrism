@@ -100,7 +100,7 @@ def dowatch(index, reg, pdc):
     assert fsreg == index_reg, "index.json and filesystem do not match: %s" % index_reg ^ fsreg
 
 
-def index_watch(index, reg, interval=3, failint=3, pdc=None):
+def index_watch(index, reg, interval=3, failint=3, pdc=None, dowatch=dowatch):
     time.sleep(10)
     while True:
         try:
@@ -116,9 +116,13 @@ def index_watch(index, reg, interval=3, failint=3, pdc=None):
         finally:
             time.sleep(interval)
 
+from pyramid.path import DottedNameResolver as dnr
+resolve = dnr(None).maybe_resolve
+
 
 def auto(config):
+    dowatch = resolve(config.registry.settings.get('cheeseprism.dowatch', 'cheeseprism.sync.dowatch'))
     index = IndexManager.from_registry(config.registry)
-    thread = Thread(target=index_watch, args=(index, config.registry, path(os.environ['PIP_DOWNLOAD_CACHE'])))
+    thread = Thread(target=index_watch, args=(index, config.registry, path(os.environ['PIP_DOWNLOAD_CACHE'])), kwargs=dict(dowatch=dowatch))
     thread.start()
     #@@ configure additional folders?
