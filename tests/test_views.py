@@ -66,7 +66,7 @@ class ViewTests(unittest.TestCase):
         assert out['releases'] == ['1.3a2'], "%s != %s" %(out['releases'], ['1.3a2'])
         assert out['search_term'] == 'pyramid'
 
-    @patch('cheeseprism.rpc.PyPi.package_details')
+    @patch('cheeseprism.rpc.PyPi.release_urls')
     def test_package_no_details(self, pd):
         """
         pypi doesn't know anything about our package
