@@ -28,7 +28,7 @@ class IPackageAdded(IPackageEvent):
 class IPackageRemoved(IPackageEvent):
     """
     A package is removed to the repository
-    """    
+    """
 
 
 class IndexEvent(object):
@@ -60,23 +60,14 @@ class PackageEvent(object):
             self.name = info.name
             self.version = info.version
 
-##     def redispatch(self):
-##         self.obj.registry.notify(self, self.obj)
-
-##     @staticmethod
-##     def channel_dispatch(event):
-##         """
-##         Resdispatches any object event with the original event and the
-##         object contained
-##         """
-##         event.redispatch()
-
-
+            
 class PackageAdded(PackageEvent):
     implements(IPackageAdded)
-
     
+    def __init__(self, index_manager, path=None, name=None, version=None, rebuild_leaf=True):
+        super(PackageAdded, self).__init__(index_manager, path, name, version)
+        self.rebuild_leaf = rebuild_leaf
+
+
 class PackageRemoved(PackageEvent):
     implements(IPackageRemoved)
-
-

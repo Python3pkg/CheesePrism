@@ -1,5 +1,4 @@
 from cheeseprism.utils import resource_spec
-from functools import partial
 from itertools import count
 from mock import Mock
 from mock import patch
@@ -146,30 +145,22 @@ class IndexTestCase(unittest.TestCase):
         assert before_txt != out.text()
 
     @patch('pyramid.threadlocal.get_current_registry')
-    def test_notify_packages_added(self, getreg):
-        from cheeseprism.index import notify_packages_added
+    def test_bulk_add_pkg(self, getreg):
+        from cheeseprism.index import bulk_add_pkgs
         self.im = self.make_one()
         pkg = stuf(name='dummypackage', version='0.1',
                    filename=self.dummy.name)
         pkgs = pkg,
         index = Mock(name='index')
         index.path = self.im.path
-        reg = getreg.return_value = Mock(name='registry')
-        out = list(notify_packages_added(index, pkgs))
+        leaves, archs = bulk_add_pkgs(index, pkgs)
 
-        assert len(out) == 1
-        assert getreg.called
-        assert reg.notify.called
-        (event,), _ = reg.notify.call_args
-        assert event.im is index
-        assert event.version == '0.1'
-        assert event.name == 'dummypackage'
-
-    def test_notify_packages_added_raises(self):
-        from cheeseprism.index import notify_packages_added
-        self.im = self.make_one()
-        with self.assertRaises(StopIteration):
-            next(notify_packages_added(Mock(name='index'), []))
+        assert len(archs) == 1
+        assert len(leaves) == 1
+        assert 'dummypackage' in leaves
+        assert archs[0].basename() == u'dummypackage-0.0dev.tar.gz'
+        assert index.register_archives.called
+        assert index.regenerate_leaf.called
 
     def tearDown(self):
         logger.debug("teardown: %s", self.count)

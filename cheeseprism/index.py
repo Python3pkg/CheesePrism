@@ -191,7 +191,7 @@ class IndexManager(object):
 
     def regenerate_all(self):
         items = self.projects_from_archives()
-        if not (self.write_index_html is True):
+        if self.write_index_html is False:
             yield None
         else:
             with benchmark('-- wrote index.html'):
@@ -265,13 +265,22 @@ class IndexManager(object):
                 json.dump(data, root)
             return data
 
+    def reg_data(self, arch):
+        pkgdata = self.arch_to_add_map(arch)
+        md5 = arch.read_md5().encode('hex')
+        return md5, pkgdata,
+
+    def register_archives(self, archs):
+        with benchmark("Register %s archives" % len(archs)):
+            data = dict(self.reg_data(arch) for arch in archs)
+            self.write_datafile(**data)
+            return data
+
     def register_archive(self, arch, registry=None):
         """
         Adds an archive to the master data store (index.json)
         """
-        pkgdata = self.arch_to_add_map(arch)
-        md5 = arch.read_md5().encode('hex')
-
+        md5, pkgdata = self.reg_data(arch)
         self.write_datafile(**{md5:pkgdata})
         return pkgdata, md5
 
@@ -305,11 +314,17 @@ def pki_ff(path, handle_error=None, func=IndexManager.pkginfo_from_file):
     return path, func(path, handle_error=handle_error)
 
 
+#@@ bad abstraction?
 @subscriber(event.IPackageAdded)
 def rebuild_leaf(event):
-    logger.info("Rebuilding leaf for %s, adding %s" %(event.name, event.path))
     reg = threadlocal.get_current_registry()
+    logger.debug("Adding %s" %(event.path))
     event.im.register_archive(event.path, registry=reg)
+
+    if event.rebuild_leaf == False:
+        return
+
+    logger.info("Rebuilding leaf for %s" %(event.name))
     out = event.im.regenerate_leaf(event.name)
     return out
 
@@ -317,17 +332,29 @@ def rebuild_leaf(event):
 @subscriber(event.IIndexUpdate)
 def bulk_update_index(event):
     new_pkgs = event.index.update_data(event.datafile, pkgdatas=event.pkgdatas)
-    return list(notify_packages_added(event.index, new_pkgs))
+    return bulk_add_pkgs(event.index, new_pkgs)
 
 
-def notify_packages_added(index, new_pkgs, reg=None):
-    if reg is None:
-        reg = threadlocal.get_current_registry()
-    for data in new_pkgs:
-        yield reg.notify(event.PackageAdded(index,
-                                            name=data['name'],
-                                            version=data['version'],
-                                            path=index.path / data['filename']))
+def bulk_add_pkgs(index, new_pkgs, reg=None):
+    """
+    Sidestep the event system for efficiency
+    """
+    with benchmark('') as bm:
+        leaves = set()
+        archs = []
+
+        for data in new_pkgs:
+            leaves.add(data['name'])
+            archs.append(index.path / data['filename'])
+
+        bm.name = "Bulk add >> register %s archives and rebuild %s leaves" %(len(archs), len(leaves))
+        index.register_archives(archs)
+
+        for leaf in leaves:
+            index.regenerate_leaf(leaf)
+
+    return leaves, archs
+
 
 
 def bulk_update_index_at_start(event):
@@ -338,14 +365,13 @@ def bulk_update_index_at_start(event):
     logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
 
     new_pkgs = index.update_data()
-    pkg_added = list(notify_packages_added(index, new_pkgs, reg))
-    index.write_index_home(index.projects_from_archives())
+    leaves, archs = bulk_add_pkgs(index, new_pkgs, reg)
 
     home_file = index.path / index.root_index_file
     if index.write_index_html is True and (not home_file.exists() or len(pkg_added)):
         items = index.projects_from_archives()
         index.write_index_home(items)
-    return pkg_added
+    return leaves, archs
 
 
 def async_bulk_update_at_start(event):
@@ -364,7 +390,7 @@ resolve = dnr(None).maybe_resolve
 preup_key = 'cheeseprism.preupdate'
 
 def noop(*args, **kw):
-    return 
+    return
 
 def includeme(config):
     config.scan(__name__)

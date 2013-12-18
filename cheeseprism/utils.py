@@ -1,8 +1,10 @@
+import functools
 import logging
 import os
 import pkg_resources
 import re
 import time
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +102,16 @@ class benchmark(object):
 
     def __enter__(self):
         self.start = time.time()
+        return self
 
-    def __exit__(self,ty,val,tb):
+    def __exit__(self, ty, val, tb):
         end = time.time()
         self.logger("%s: %0.3f seconds", self.name, end-self.start)
         return False
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def wrapped(*args, **kw):
+            with self:
+                return func(*args, **kw)
+        return wrapped
