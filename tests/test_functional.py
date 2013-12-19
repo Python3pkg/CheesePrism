@@ -85,13 +85,14 @@ class FunctionalTests(unittest.TestCase):
 
     def tearDown(self):
         logger.debug("teardown: %s", self.count)
-        dirs = self.base.dirs()
-        logger.debug(pprint(dirs))
-        time.sleep(0.02)
-        logger.debug(pprint([x.rmtree() for x in dirs]))
+        if self.base.exists():
+            dirs = self.base.dirs()
+            logger.debug(pprint(dirs))
+            time.sleep(0.02)
+            logger.debug(pprint([x.rmtree() for x in dirs]))
 
     #@@ tests for deprecated expiremental multiprocessing tests
-    
+
     @py.test.mark.mp
     def test_root_proc(self):
         testapp = self.makeone({'cheeseprism.futures':'process'})

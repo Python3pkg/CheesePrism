@@ -164,9 +164,10 @@ class IndexTestCase(unittest.TestCase):
 
     def tearDown(self):
         logger.debug("teardown: %s", self.count)
-        dirs = self.base.dirs()
-        logger.info(pprint(dirs))
-        logger.info(pprint([x.rmtree() for x in dirs]))
+        if self.base.exists():
+            dirs = self.base.dirs()
+            logger.info(pprint(dirs))
+            logger.info(pprint([x.rmtree() for x in dirs]))
 
 
 class ClassOrStaticMethods(unittest.TestCase):
