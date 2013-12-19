@@ -171,6 +171,13 @@ class IndexTestCase(unittest.TestCase):
             logger.info(pprint(dirs))
             logger.info(pprint([x.rmtree() for x in dirs]))
 
+def test_group_by_magnitude():
+    from cheeseprism.index import IndexManager
+    fiver = range(5)
+    assert IndexManager.group_by_magnitude(fiver)[0] == fiver
+    assert next(IndexManager.group_by_magnitude(range(101))) == range(10)
+    assert next(IndexManager.group_by_magnitude(range(1001))) == range(100)
+
 
 class ClassOrStaticMethods(unittest.TestCase):
 

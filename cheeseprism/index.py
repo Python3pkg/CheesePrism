@@ -7,6 +7,7 @@ from .desc import updict
 from .jenv import EnvFactory
 from .utils import benchmark
 from functools import partial
+from more_itertools import chunked
 from path import path
 from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
@@ -188,8 +189,8 @@ class IndexManager(object):
         with benchmark('-- collected projects'):
             projects = {}
             paths = (self.path / item for item in self.files)
-
-            results = [info for info in self.executor.map(pki_ff, paths)]
+            arch_info = partial(pki_ff, handle_error=self.move_on_error)
+            results = [info for info in self.executor.map(arch_info, paths)]
             for itempath, info in results:
                 projects.setdefault(info.name, []).append((info, itempath))
 
@@ -296,28 +297,45 @@ class IndexManager(object):
         self.write_datafile(**{md5:pkgdata})
         return pkgdata, md5
 
+    def _update_data(self, archs, datafile):
+        with self.index_data_lock:
+            data = self.data_from_path(datafile)
+            new = []
+            exe = self.executor
+
+            read = self.archive_tool
+            archdata = [(arch, data) for arch in archs]
+            for md5, pkgdata in exe.map(read, archdata):
+                if pkgdata is not None:
+                    data[md5] = pkgdata
+                    new.append(pkgdata)
+
+            pkgs = len(set(x['name'] for x in data.values()))
+            logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
+            with open(datafile, 'w') as root:
+                json.dump(data, root)
+            return new
+
+    @staticmethod
+    def group_by_magnitude(collection):
+        alen = len(collection)
+        if alen > 1000:
+            return chunked(collection, 100)
+        if alen > 100:
+            return chunked(collection, 10)
+        return [collection]
+
     def update_data(self, datafile=None, pkgdatas=None):
         if datafile is None:
             datafile = self.datafile_path
 
         archs = self.files if pkgdatas is None else pkgdatas.keys()
+        new = []
+        
+        archs_g = self.group_by_magnitude([x for x in archs])
         with benchmark("Rebuilt /index.json"):
-            with self.index_data_lock:
-                data = self.data_from_path(datafile)
-                new = []
-                exe = self.executor
-
-                read = self.archive_tool
-                archdata = ((arch, data) for arch in archs)
-                for md5, pkgdata in exe.map(read, archdata):
-                    if pkgdata is not None:
-                        data[md5] = pkgdata
-                        new.append(pkgdata)
-
-                pkgs = len(set(x['name'] for x in data.values()))
-                logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
-                with open(datafile, 'w') as root:
-                    json.dump(data, root)
+            for archs in archs_g:
+                new.extend(self._update_data(archs, datafile))
 
         return new
 

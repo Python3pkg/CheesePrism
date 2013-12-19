@@ -14,7 +14,8 @@ requires = ['Jinja2',
             'pyramid',
             'pyramid_jinja2',
             'requests',
-            'pip']
+            'pip',
+            'more-itertools']
 
 version='0.4.0a6'
 
