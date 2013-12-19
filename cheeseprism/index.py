@@ -51,9 +51,9 @@ class ArchiveUtil(object):
                     filename=str(arch.name),
                     added=start)
 
-    def move_on_error(self, error_folder, exc, path):
+    def move_on_error(self, error_folder, exc, path_):
         logger.error(traceback.format_exc())
-        path.rename(error_folder)
+        path_.rename(path(error_folder) / path_.basename())
 
     def extension_of(self, path):
         match = self.EXTS.match(str(path))
