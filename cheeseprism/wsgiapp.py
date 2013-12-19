@@ -1,15 +1,13 @@
 from .jenv import EnvFactory
 from cheeseprism.auth import BasicAuthenticationPolicy
 from cheeseprism.resources import App
-from functools import partial
 from pyramid.config import Configurator
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
 from pyramid.settings import asbool
 import futures
 import logging
-import multiprocessing
 import os
-import signal
+
 
 
 logger = logging.getLogger(__name__)
@@ -46,45 +44,30 @@ def main(global_config, **settings):
     return config.make_wsgi_app()
 
 
-def sig_handler(executor, sig, frame, wait=True):
-    logger.warn("Signal %d recieved: wait: %s", sig, wait)
-    executor.shutdown(wait)
-    logger.info("Executor shutdown complete")
-
-
 def ping_proc(i):
     pid = os.getpid()
     logger.debug("worker %s up: %s", i, pid)
     return pid
 
 
-def setup_workers(registry, handler=sig_handler):
+def setup_workers(registry):
     """
-    ATT: Sensitive voodoo. Workers must be setup before any other
-    threads are launched. Workers must be initialized before signals
-    are registered.
+    now thread only
     """
     settings = registry.settings
 
-    registry['cp.executor_type'] = executor_type =\
-      settings.get('cheeseprism.futures', 'thread')
+    registry['cp.executor_type'] = 'thread'
 
-    executor = executor_type != 'process' and futures.ThreadPoolExecutor \
-      or futures.ProcessPoolExecutor
+    executor = futures.ThreadPoolExecutor 
 
-    workers = int(settings.get('cheeseprism.futures.workers', 0))
-    if executor_type == 'process' and workers <= 0:
-        workers = multiprocessing.cpu_count() + 1
-    else:
-        workers = workers <= 0 and 10 or workers
+    workers = int(settings.get('cheeseprism.futures.workers', 5))
 
-    logging.info("PID %s using %s executor with %s workers", os.getpid(), executor_type, workers)
+
+    logging.info("Starting thread executor w/ %s workers", workers)
     executor = registry['cp.executor'] = executor(workers)
 
     # -- This initializes our processes/threads
     workers = [str(pid) for pid in executor.map(ping_proc, range(workers))]
     logger.info("workers: %s", " ".join(workers))
 
-    # -- Register signals after init so to not have an echo effect
-    for sig in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
-        signal.signal(sig, partial(sig_handler, executor))
+
