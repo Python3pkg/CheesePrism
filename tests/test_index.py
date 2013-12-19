@@ -1,8 +1,8 @@
 from cheeseprism.utils import resource_spec
 from itertools import count
 from mock import Mock
+from mock import call
 from mock import patch
-from nose.tools import raises
 from path import path
 from pprint import pformat as pprint
 from stuf import stuf
@@ -37,14 +37,15 @@ class IndexTestCase(unittest.TestCase):
     @property
     def base(self): return self.get_base()
 
-    def make_one(self, index_name='test-index'):
+    def make_one(self, index_name='test-index', pkg='dummy'):
         from cheeseprism import index
         self.count = next(self.counter)
         executor = futures.ThreadPoolExecutor(1)
         index_path = self.base / ("%s-%s" %(self.count, index_name))
         idx = index.IndexManager(index_path, executor=executor)
-        self.dummy.copy(idx.path)
-        self.dummypath = idx.path / self.dummy.name
+        pkg = getattr(self, pkg)
+        pkg.copy(idx.path)
+        self.dummypath = idx.path / pkg.name
         return idx
 
     def test_register_archive(self):
@@ -153,7 +154,7 @@ class IndexTestCase(unittest.TestCase):
         pkgs = pkg,
         index = Mock(name='index')
         index.path = self.im.path
-        leaves, archs = bulk_add_pkgs(index, pkgs)
+        leaves, archs = bulk_add_pkgs(index, pkgs, register=True)
 
         assert len(archs) == 1
         assert len(leaves) == 1
@@ -196,21 +197,33 @@ class ClassOrStaticMethods(unittest.TestCase):
         for ext in ('.gz','.tgz', '.bz2', '.zip'):
             assert IndexManager.pkginfo_from_file('blah.%s' %ext) is True
 
-    @raises(RuntimeError)
     def test_pkginfo_from_bad_ext(self):
         """
         .pkginfo_from_file with unrecognized extension
         """
         from cheeseprism.index import IndexManager
-        IndexManager.pkginfo_from_file('adfasdkfha.adkfhalsdk')
+        with self.assertRaises(RuntimeError):
+            IndexManager.pkginfo_from_file('adfasdkfha.adkfhalsdk')
 
-    @raises(RuntimeError)
+    def test_pkginfo_from_bad_ext_handled(self):
+        """
+        .pkginfo_from_file with unrecognized extension
+        """
+        from cheeseprism.index import IndexManager
+        handler = Mock(name='handler')
+        IndexManager.pkginfo_from_file('adfasdkfha.adkfhalsdk', handle_error=handler)
+        assert handler.call_args[0][1] == 'adfasdkfha.adkfhalsdk'
+        assert isinstance(handler.call_args[0][0], RuntimeError)
+
+
     def test_pkginfo_from_no_ext(self):
         """
         .pkginfo_from_file with no extension
         """
         from cheeseprism.index import IndexManager
-        IndexManager.pkginfo_from_file('adfasdkfha')
+        with self.assertRaises(RuntimeError):
+            IndexManager.pkginfo_from_file('adfasdkfha')
+
 
     def test_pkginfo_from_file_exc_and_handler(self):
         """
@@ -224,15 +237,15 @@ class ClassOrStaticMethods(unittest.TestCase):
         assert eh.called
         assert eh.call_args[0] == (exc, 'bad.egg'), eh.call_args[0]
 
-    @raises(ValueError)
     def test_pkginfo_from_file_exc(self):
         """
         .pkginfo_from_file with exception and no handler
         """
         from cheeseprism.index import IndexManager
         exc = ValueError("BOOM")
-        with patch('pkginfo.bdist.BDist', side_effect=exc):
-            IndexManager.pkginfo_from_file('bad.egg')
+        with self.assertRaises(ValueError):
+            with patch('pkginfo.bdist.BDist', side_effect=exc):
+                IndexManager.pkginfo_from_file('bad.egg')
 
 def test_cleanup():
     assert not IndexTestCase.get_base().dirs()
