@@ -28,7 +28,7 @@ class ArchiveUtil(object):
     """
     A pickeable object we can pass via mp queues
     """
-    EXTS = re.compile(r'^.*(?P<ext>\.egg|\.gz|\.bz2|\.tgz|\.zip)$')
+    EXTS = re.compile(r'^.*(?P<ext>\.egg|\.gz|\.bz2|\.tgz|\.zip|\.whl)$')
 
     def read(self, (arch, data)):
         md5 = arch.read_md5().encode('hex')
@@ -61,17 +61,27 @@ class ArchiveUtil(object):
 
     def pkginfo_from_file(self, path, handle_error=None):
         ext = self.extension_of(path)
+        not_recognized = False
         try:
             if ext is not None:
                 if ext in set(('.gz','.tgz', '.bz2', '.zip')):
                     return pkginfo.sdist.SDist(path)
                 elif ext == '.egg':
                     return pkginfo.bdist.BDist(path)
+            not_recognized = True
         except Exception, e:
             if handle_error is not None:
                 return handle_error(e, path)
             raise
-        raise RuntimeError("Unrecognized extension: %s" %path)
+
+        if not_recognized is True:
+            msg = "Unrecognized extension: %s" %path
+            e = RuntimeError("Unrecognized extension: %s" %path)
+            if handle_error is not None:
+                logger.error(msg)
+                return handle_error(e, path)
+            
+            raise e
 
 
 class IndexManager(object):
@@ -332,10 +342,10 @@ def rebuild_leaf(event):
 @subscriber(event.IIndexUpdate)
 def bulk_update_index(event):
     new_pkgs = event.index.update_data(event.datafile, pkgdatas=event.pkgdatas)
-    return bulk_add_pkgs(event.index, new_pkgs)
+    return bulk_add_pkgs(event.index, new_pkgs, register=False)
 
 
-def bulk_add_pkgs(index, new_pkgs, reg=None):
+def bulk_add_pkgs(index, new_pkgs, register=False):
     """
     Sidestep the event system for efficiency
     """
@@ -348,13 +358,16 @@ def bulk_add_pkgs(index, new_pkgs, reg=None):
             archs.append(index.path / data['filename'])
 
         bm.name = "Bulk add >> register %s archives and rebuild %s leaves" %(len(archs), len(leaves))
-        index.register_archives(archs)
+        if register is True:
+            index.register_archives(archs)
 
         for leaf in leaves:
-            index.regenerate_leaf(leaf)
+            try:
+                index.regenerate_leaf(leaf)
+            except Exception:
+                logger.exception('Issue building leaf for %s', leaf)
 
     return leaves, archs
-
 
 
 def bulk_update_index_at_start(event):
@@ -365,7 +378,7 @@ def bulk_update_index_at_start(event):
     logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
 
     new_pkgs = index.update_data()
-    leaves, archs = bulk_add_pkgs(index, new_pkgs, reg)
+    leaves, archs = bulk_add_pkgs(index, new_pkgs, register=False)
 
     home_file = index.path / index.root_index_file
     if index.write_index_html is True and (not home_file.exists() or len(leaves)):
