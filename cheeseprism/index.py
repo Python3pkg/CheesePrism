@@ -368,7 +368,7 @@ def bulk_update_index_at_start(event):
     leaves, archs = bulk_add_pkgs(index, new_pkgs, reg)
 
     home_file = index.path / index.root_index_file
-    if index.write_index_html is True and (not home_file.exists() or len(pkg_added)):
+    if index.write_index_html is True and (not home_file.exists() or len(leaves)):
         items = index.projects_from_archives()
         index.write_index_home(items)
     return leaves, archs
