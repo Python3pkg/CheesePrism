@@ -68,6 +68,8 @@ class ArchiveUtil(object):
                     return pkginfo.sdist.SDist(path)
                 elif ext == '.egg':
                     return pkginfo.bdist.BDist(path)
+                elif ext == '.whl':
+                    return pkginfo.wheel.Wheel(path)
             not_recognized = True
         except Exception, e:
             if handle_error is not None:
@@ -80,7 +82,7 @@ class ArchiveUtil(object):
             if handle_error is not None:
                 logger.error(msg)
                 return handle_error(e, path)
-            
+
             raise e
 
 
