@@ -13,11 +13,10 @@ requires = ['Jinja2',
             'pkginfo',
             'pyramid',
             'pyramid_jinja2',
-            'pyramid_tm',
             'requests',
             'pip']
 
-version='0.4.0a4'
+version='0.4.0a5'
 
 setup(name='CheesePrism',
       version=version,

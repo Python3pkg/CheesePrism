@@ -1,6 +1,13 @@
 CHANGES
 =======	
 
+0.4.0a5
+=======	
+
+2013-12-19  Whit  <whit@surveymonkey.com>
+	* More optimizations for bulk loading and updating
+	* Skip multiprocessing tests
+	
 	
 0.4.0a3
 =======
