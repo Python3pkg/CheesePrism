@@ -9,9 +9,7 @@ import logging
 import os
 
 
-
 logger = logging.getLogger(__name__)
-
 
 
 def main(global_config, **settings):
