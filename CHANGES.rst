@@ -6,6 +6,7 @@ CHANGES
 
 2013-12-19  Whit  <whit@surveymonkey.com>
 	* fix bug with `move_on_error`. Now does move rather than failing
+	* fix tests 
 	
 0.4.0a8
 =======	

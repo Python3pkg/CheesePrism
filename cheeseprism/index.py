@@ -51,7 +51,8 @@ class ArchiveUtil(object):
                     filename=str(arch.name),
                     added=start)
 
-    def move_on_error(self, error_folder, exc, path_):
+    @staticmethod
+    def move_on_error(error_folder, exc, path_):
         logger.error(traceback.format_exc())
         path_.rename(path(error_folder) / path_.basename())
 
@@ -110,7 +111,7 @@ class IndexManager(object):
     home_template = template('home.html')
 
     at = archive_tool = ArchiveUtil()
-    move_on_error = at.move_on_error
+    _move_on_error = at.move_on_error
 
     pkginfo_to_pkgdata = at.pkginfo_to_pkgdata
     pkginfo_from_file = at.pkginfo_from_file
@@ -141,7 +142,7 @@ class IndexManager(object):
                 self.error_folder.parent.remove_p()
             self.error_folder.makedirs()
 
-        self.move_on_error = partial(self.move_on_error, self.error_folder)
+        self.move_on_error = partial(self._move_on_error, self.error_folder)
         self.arch_to_add_map = partial(self.at.arch_to_add_map,
                                        error_handler=self.move_on_error)
         self.executor = executor
@@ -171,11 +172,6 @@ class IndexManager(object):
                    template_env=env,
                    executor=executor,
                    write_index_html=write_index_html)
-
-    @staticmethod
-    def move_on_error(error_folder, exc, path):
-        logger.error(traceback.format_exc())
-        path.rename(error_folder)
 
     @property
     def default_env_factory(self):

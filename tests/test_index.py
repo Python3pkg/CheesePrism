@@ -182,11 +182,12 @@ def test_group_by_magnitude():
 class ClassOrStaticMethods(unittest.TestCase):
 
     def test_move_on_error(self):
-        from cheeseprism.index import IndexManager
+        from cheeseprism.index import ArchiveUtil
         exc, path = Mock(), Mock()
-        IndexManager.move_on_error('errors', exc, path)
+        path.basename.return_value = '_path_'
+        ArchiveUtil.move_on_error('errors', exc, path)
         assert path.rename.called
-        assert path.rename.call_args[0][0] == 'errors'
+        assert path.rename.call_args[0][0] == 'errors/_path_'
 
     def test_pkginfo_from_file_whl(self):
         """
