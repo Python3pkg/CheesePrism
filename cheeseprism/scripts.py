@@ -10,8 +10,12 @@ def mc(args=sys.argv[1:]):
     pargs = parser.parse_args(args)
     index = pargs.path.abspath()
 
+    files = index.files('*-master.tar.gz')
+
+    print "%s files" %len(files)
     for fp in index.files('*-master.tar.gz'):
         np = fp.parent / fp.replace('-master', '')
-        print("%s -> %s" %(fp, np))
         if not np.exists():
             fp.copy(np)
+        else:
+            print "DUPE: %s" %np
