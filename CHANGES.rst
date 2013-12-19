@@ -1,6 +1,14 @@
 CHANGES
 =======	
 
+0.4.0a8
+=======	
+
+2013-12-19  Whit  <whit@surveymonkey.com>
+	* Chunked updating of index.json for large indexes
+	* Better logging
+
+
 0.4.0a6
 =======	
 

@@ -17,7 +17,7 @@ requires = ['Jinja2',
             'pip',
             'more-itertools']
 
-version='0.4.0a7'
+version='0.4.0a8'
 
 setup(name='CheesePrism',
       version=version,

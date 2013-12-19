@@ -310,10 +310,9 @@ class IndexManager(object):
                     data[md5] = pkgdata
                     new.append(pkgdata)
 
-            pkgs = len(set(x['name'] for x in data.values()))
-            logger.info("Inspected %s versions for %s packages" %(len(data), pkgs))
-            with open(datafile, 'w') as root:
-                json.dump(data, root)
+                with open(datafile, 'w') as root:
+                    json.dump(data, root)
+                    
             return new
 
     @staticmethod
@@ -331,11 +330,14 @@ class IndexManager(object):
 
         archs = self.files if pkgdatas is None else pkgdatas.keys()
         new = []
-        
+
         archs_g = self.group_by_magnitude([x for x in archs])
         with benchmark("Rebuilt /index.json"):
             for archs in archs_g:
                 new.extend(self._update_data(archs, datafile))
+
+        pkgs = len(set(x['name'] for x in new))
+        logger.info("Inspected %s versions for %s packages" %(len(new), pkgs))
 
         return new
 
