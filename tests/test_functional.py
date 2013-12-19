@@ -8,7 +8,7 @@ from pyramid.decorator import reify
 import logging
 import unittest
 import time
-import py.test
+
 
 logger = logging.getLogger(__name__)
 here = path(__file__).parent
@@ -91,19 +91,4 @@ class FunctionalTests(unittest.TestCase):
             time.sleep(0.02)
             logger.debug(pprint([x.rmtree() for x in dirs]))
 
-    #@@ tests for deprecated expiremental multiprocessing tests
 
-    @py.test.mark.mp
-    def test_root_proc(self):
-        testapp = self.makeone({'cheeseprism.futures':'process'})
-        res = testapp.get('/', status=200)
-        self.failUnless('Cheese' in res.body)
-
-    @py.test.mark.mp
-    def test_root_proc_pip_sync(self):
-        with patch.dict('os.environ', {'PIP_DOWNLOAD_CACHE': resource_spec(self.pipcache)}):
-            testapp = self.makeone({'cheeseprism.futures':'process',
-                                    'cheeseprism.pipcache_mirror':'true'})
-            time.sleep(0.02)
-            res = testapp.get('/index', status=200)
-        assert 'WUT' in res.body
