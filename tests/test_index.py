@@ -29,6 +29,7 @@ class IndexTestCase(unittest.TestCase):
 
     tdir = path(resource_spec('egg:CheesePrism#tests'))
     dummy = here / "dummypackage/dist/dummypackage-0.0dev.tar.gz"
+    dum_whl = here / "dummypackage/dist/dummypackage-0.0dev-py27-none-any.whl"
 
     @classmethod
     def get_base(cls):
@@ -179,6 +180,14 @@ class ClassOrStaticMethods(unittest.TestCase):
         IndexManager.move_on_error('errors', exc, path)
         assert path.rename.called
         assert path.rename.call_args[0][0] == 'errors'
+
+    def test_pkginfo_from_file_whl(self):
+        """
+        .pkginfo_from_file: wheel
+        """
+        from cheeseprism.index import IndexManager
+        with patch('pkginfo.wheel.Wheel', new=Mock(return_value=True)):
+            assert IndexManager.pkginfo_from_file('blah.whl') is True
 
     @patch('pkginfo.bdist.BDist', new=Mock(return_value=True))
     def test_pkginfo_from_file_egg(self):
