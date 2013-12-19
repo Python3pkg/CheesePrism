@@ -39,7 +39,7 @@ class ArchiveUtil(object):
     __call__ = read
 
     def arch_to_add_map(self, arch, error_handler=None):
-        pkgi = self.pkginfo_from_file(arch, error_handler)
+        pkgi = self.pkginfo_from_file(arch, handle_error=error_handler)
         if pkgi:
             return self.pkginfo_to_pkgdata(arch, pkgi)
 
@@ -198,7 +198,7 @@ class IndexManager(object):
 
     def regenerate_leaf(self, leafname):
         files = self.path.files('%s-*.*' %leafname)
-        versions = ((self.pkginfo_from_file(self.path / item), item) for item in files)
+        versions = ((self.pkginfo_from_file(self.path / item, handle_error=self.move_on_error), item) for item in files)
         return self.write_leaf(self.path / leafname, versions)
 
     def regenerate_all(self):
