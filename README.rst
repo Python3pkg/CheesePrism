@@ -273,19 +273,12 @@ Configure Concurrency for index management
 Under the hood for highly repetive tasks, Cheeseprism uses `futures`
 to speed certain operations.
 
-The executor may be configured like so::
-
-  cheeseprism.futures = [thread|process]
-
-
 The number of workers may be configured by::
 
   cheeseprism.futures.workers = 12  
 
 
-By default, Cheeseprism uses the `ThreadExecutor` w/ 10
-threads. Currently the `process` implementation is experimental and
-may have unexpected issues depending on what server you are using.
+`v0.4.0a7` removes the option for the `process` executor. 
 
 
 Skip writing index.html
@@ -305,6 +298,7 @@ Future
 ======
 
 Really, the future is likely an different pypi mirror like devpi.
+
 Some features we thought about implementing:
 
  * **Multi-index support**:  The general idea is that you can evolve
