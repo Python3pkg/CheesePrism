@@ -1,6 +1,17 @@
 CHANGES
 =======	
 
+0.4.0a6
+=======	
+
+2013-12-19  Whit  <whit@surveymonkey.com>
+	* Add support for wheels
+	* handle errors when extensions are unrecognized
+	* fix for error wrt empty archive sets
+	* skip registration when `update_data` has already been run
+
+
+	
 0.4.0a5
 =======	
 
