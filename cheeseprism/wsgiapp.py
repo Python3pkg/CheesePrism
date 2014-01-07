@@ -39,6 +39,10 @@ def main(global_config, **settings):
     if asbool(settings.get('cheeseprism.auto_sync', False)):
         config.include('.sync.auto')
 
+    tempfile_limit = settings.get('cheeseprism.temp_file_limit', 10*1024)
+    config.add_request_method(lambda req: tempfile_limit,
+                              name='request_body_tempfile_limit', reify=True)
+
     return config.make_wsgi_app()
 
 
@@ -56,7 +60,7 @@ def setup_workers(registry):
 
     registry['cp.executor_type'] = 'thread'
 
-    executor = futures.ThreadPoolExecutor 
+    executor = futures.ThreadPoolExecutor
 
     workers = int(settings.get('cheeseprism.futures.workers', 5))
 
@@ -67,5 +71,3 @@ def setup_workers(registry):
     # -- This initializes our processes/threads
     workers = [str(pid) for pid in executor.map(ping_proc, range(workers))]
     logger.info("workers: %s", " ".join(workers))
-
-

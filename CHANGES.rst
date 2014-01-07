@@ -1,6 +1,16 @@
 CHANGES
 =======	
 
+0.4.0b0
+=======	
+
+2014-03-07  Whit  <whit@surveymonkey.com>
+	* Add request method to overwrite
+	  `webob.request.BaseRequest.request.request_body_tempfile_limit`
+	* Add `cheeseprism.temp_file_limit` configuration value to allow
+	  `request_body_tempfile_limit` to be determined by config.
+
+	
 0.4.0a9
 =======	
 

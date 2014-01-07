@@ -83,6 +83,13 @@ class FunctionalTests(unittest.TestCase):
         res = testapp.get('/', status=200)
         self.failUnless('Cheese' in res.body)
 
+    def test_request_size_limit(self):
+        testapp = self.makeone({'cheeseprism.temp_file_limit': 100*1024,
+                                'pyramid.includes': __name__ + '.request_size_check'})
+
+        res = testapp.get('/sizetest', status=200)
+        assert res.json.get('request_size', False) == 102400
+
     def tearDown(self):
         logger.debug("teardown: %s", self.count)
         if self.base.exists():
@@ -92,3 +99,8 @@ class FunctionalTests(unittest.TestCase):
             logger.debug(pprint([x.rmtree() for x in dirs]))
 
 
+def request_size_check(config):
+    def sizetest(request):
+        return {'request_size': request.request_body_tempfile_limit}
+    config.add_route('sizetest', '/sizetest')
+    config.add_view(sizetest, route_name='sizetest', renderer='json')
