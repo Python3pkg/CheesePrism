@@ -39,7 +39,7 @@ def main(global_config, **settings):
     if asbool(settings.get('cheeseprism.auto_sync', False)):
         config.include('.sync.auto')
 
-    tempfile_limit = settings.get('cheeseprism.temp_file_limit', 10*1024)
+    tempfile_limit = int(settings.get('cheeseprism.temp_file_limit', 10*1024))
     config.add_request_method(lambda req: tempfile_limit,
                               name='request_body_tempfile_limit', reify=True)
 
