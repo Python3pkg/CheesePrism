@@ -306,8 +306,8 @@ class IndexManager(object):
                     data[md5] = pkgdata
                     new.append(pkgdata)
 
-                with open(datafile, 'w') as root:
-                    json.dump(data, root)
+            with open(datafile, 'w') as root:
+                json.dump(data, root)
                     
             return new
 
