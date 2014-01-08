@@ -1,6 +1,6 @@
 from path import path
 
-here = path('.')
+here = path(__name__).parent
 testdir = here / 'test-indexes/test-main'
 
 def test_main():
