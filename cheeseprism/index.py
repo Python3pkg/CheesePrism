@@ -308,7 +308,7 @@ class IndexManager(object):
 
             with open(datafile, 'w') as root:
                 json.dump(data, root)
-                    
+
             return new
 
     @staticmethod
