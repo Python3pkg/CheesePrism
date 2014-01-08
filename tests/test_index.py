@@ -1,7 +1,6 @@
 from cheeseprism.utils import resource_spec
 from itertools import count
 from mock import Mock
-from mock import call
 from mock import patch
 from path import path
 from pprint import pformat as pprint
@@ -25,9 +24,8 @@ def test_data_from_path():
 
 class IndexTestCase(unittest.TestCase):
     counter = count()
-    index_parent = "egg:CheesePrism#tests/test-indexes"
+    index_parent = here / "test-indexes"
 
-    tdir = path(resource_spec('egg:CheesePrism#tests'))
     dummy = here / "dummypackage/dist/dummypackage-0.0dev.tar.gz"
     dum_whl = here / "dummypackage/dist/dummypackage-0.0dev-py27-none-any.whl"
 
@@ -128,7 +126,7 @@ class IndexTestCase(unittest.TestCase):
         from cheeseprism.event import PackageAdded
         from cheeseprism.index import rebuild_leaf
         self.im = self.make_one()
-        event = PackageAdded(self.im, self.tdir / path('dummypackage2/dist/dummypackage-0.1.tar.gz'))
+        event = PackageAdded(self.im, here / path('dummypackage2/dist/dummypackage-0.1.tar.gz'))
         out = rebuild_leaf(event)
         assert out is not None
         assert rl.call_args == (('dummypackage',), {})
@@ -137,7 +135,7 @@ class IndexTestCase(unittest.TestCase):
         self.im = self.make_one()
         [x for x in self.im.regenerate_all()]
         leafindex = self.im.path / 'dummypackage/index.html'
-        new_arch = self.tdir / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        new_arch = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
         new_arch.copy(self.im.path)
         added = self.im.path / new_arch.name
 

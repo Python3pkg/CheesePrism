@@ -2,7 +2,6 @@ from cheeseprism.utils import resource_spec
 from itertools import count
 from mock import Mock
 from mock import patch
-from nose.tools import raises
 from path import path
 from pip.exceptions import DistributionNotFound
 from pip.index import Link
@@ -157,7 +156,6 @@ class TestReqDownloaderHandler(PipExtBase):
         rd.seen.add(self.link.hash)
         assert rd.handle_requirement(req, finder) is None
 
-    @raises(TypeError)
     def test_typeerror_raise(self, download_url):
         """
         Testing formality to make sure our diaper does not hide our
@@ -165,7 +163,8 @@ class TestReqDownloaderHandler(PipExtBase):
         """
         rd, req = self.basic_prep(download_url)
         download_url.side_effect = TypeError('Kaboom')
-        assert rd.handle_requirement(req, self.mock_finder) is None
+        with self.assertRaises(TypeError):
+            assert rd.handle_requirement(req, self.mock_finder) is None
 
     def test_general_download_exception(self, download_url):
         """
@@ -213,11 +212,11 @@ class TestReqDownloaderHandler(PipExtBase):
 @patch('cheeseprism.pipext.RequirementDownloader.handle_requirement')
 class TestReqDownloaderAll(PipExtBase):
 
-    @raises(StopIteration)
     def test_download_all_nothing(self, handle):
         handle.return_value = None
         rd = self.makeone()
-        next(rd.download_all())
+        with self.assertRaises(StopIteration):
+            next(rd.download_all())
 
     def test_download_single_pkg(self, handle):
         marker = object()

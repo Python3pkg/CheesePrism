@@ -4,7 +4,6 @@ from cheeseprism.resources import App
 from contextlib import contextmanager
 from mock import Mock
 from mock import patch
-from nose.tools import raises
 from path import path
 from pyramid import testing
 from pyramid.decorator import reify
@@ -194,15 +193,14 @@ class ViewTests(unittest.TestCase):
         assert len(req.file_root.files()) == 2
         assert set([x.name for x in req.file_root.files()]) == set(('index.html', 'index.json'))
 
-    @raises(RuntimeError)
     def test_upload_raises(self):
         from cheeseprism.views import upload
         context, request = self.base_cr
         request.POST['content'] = ''
         request.method = 'POST'
-        upload(context, request)
+        with self.assertRaises(RuntimeError):
+            upload(context, request)
 
-    @raises(RuntimeError)
     def test_upload_raises_packageadded(self):
         """
         If adding the package raises an error, an exception should be logged
@@ -215,7 +213,8 @@ class ViewTests(unittest.TestCase):
         with patch('cheeseprism.views.event.PackageAdded',
                    side_effect=RuntimeError('Kaboom')):
             with patch('path.path.write_bytes'):
-                upload(context, request)
+                with self.assertRaises(RuntimeError):
+                    upload(context, request)
 
     @patch('path.path.write_bytes')
     def test_upload(self, wb):

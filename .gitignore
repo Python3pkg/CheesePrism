@@ -13,6 +13,6 @@ env*/
 /cheeseprism/.coverage
 /.coverage*
 */.coverage
-
+/.tox
 /tests/dummypackage/.coverage
 /tests/dummypackage/build/lib/dummypackage/__init__.py

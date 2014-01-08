@@ -18,9 +18,9 @@ class FunctionalTests(unittest.TestCase):
     testdir = here / 'test-indexes'
     dummy = here / "dummypackage/dist/dummypackage-0.0dev.tar.gz"
     counter = count()
-    index_parent = "egg:CheesePrism#tests/test-indexes"
-    pipcache = "egg:CheesePrism#tests/pipcache"
-    devini = "egg:CheesePrism#development.ini"
+    index_parent = here / "test-indexes"
+    pipcache = here / "pipcache"
+    devini = here / 'development.ini'
 
     dummy = here / "dummypackage/dist/dummypackage-0.0dev.tar.gz"
 
