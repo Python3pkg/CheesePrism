@@ -1,4 +1,7 @@
+from pyramid.decorator import reify
+from path import path as path_base
 import functools
+import hashlib
 import logging
 import os
 import pkg_resources
@@ -7,6 +10,39 @@ import time
 
 
 logger = logging.getLogger(__name__)
+
+
+class path(path_base):
+
+    @reify
+    def md5hex(self):
+        return self.read_md5_fast().encode('hex')
+
+    def read_md5_fast(self):
+        """ Calculate the md5 hash for this file.
+
+        This reads through the entire file.
+        """
+        return self.read_hash_fast('md5')
+
+    def _hash_whole(self, hash_name):
+        """ Returns a hash object for the file at the current path.
+
+            `hash_name` should be a hash algo name such as 'md5' or 'sha1'
+            that's available in the `hashlib` module.
+        """
+        m = hashlib.new(hash_name)
+        m.update(self.bytes())
+        return m
+
+    def read_hash_fast(self, hash_name):
+        """ Calculate given hash for this file.
+
+        List of supported hashes can be obtained from hashlib package. This
+        reads the entire file.
+        """
+        return self._hash_whole(hash_name).digest()
+
 
 
 def resource_spec(spec):

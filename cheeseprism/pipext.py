@@ -1,6 +1,6 @@
 from cheeseprism.index import IndexManager
 from functools import partial
-from path import path
+from .utils import path
 from pip.exceptions import DistributionNotFound
 from pip.index import PackageFinder
 from pip.locations import build_prefix, src_prefix
@@ -149,7 +149,7 @@ class RequirementDownloader(object):
             self.errors.append("%s: %s" %(req, msg)) 
             return
 
-        self.seen.add(outfile.read_md5().encode('hex'))
+        self.seen.add(outfile.md5hex)
         deplinks, reqs = self.depinfo_for_file(outfile)
         if not reqs:
             return pkginfo, outfile, None

@@ -1,5 +1,5 @@
 import jinja2.loaders
-from path import path
+from cheeseprism.utils import path
 
 
 def test_envfactory_makes_loaders():
@@ -13,6 +13,3 @@ def test_envfactory_makes_loaders():
     assert env.loader.loaders[-1].package_path == 'templates/index', env.loader.loaders[-1].package_path
     assert env.loader.loaders[-2].package_path == 'templates'
     assert env.loader.loaders[-3].package_path == 'templates/fake'
-    
-
-    

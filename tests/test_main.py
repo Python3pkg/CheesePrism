@@ -1,4 +1,4 @@
-from path import path
+from cheeseprism.utils import path
 
 here = path(__name__).parent
 testdir = here / 'test-indexes/test-main'

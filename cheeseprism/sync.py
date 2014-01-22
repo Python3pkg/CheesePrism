@@ -1,7 +1,7 @@
 from . import utils
 from .index import IndexManager
 from .index import bulk_add_pkgs
-from path import path
+from .utils import path
 from threading import Thread
 import logging
 import os
@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 def sync_folder(index, folder):
     with utils.benchmark("Sync packages"):
         EXTS = index.archive_tool.EXTS
-        candidates = dict((x.read_md5().encode('hex'), x)\
+        candidates = dict((x.md5hex, x)\
                           for x in folder.files()\
                           if EXTS.match(x))
 
-        current = dict((x.read_md5().encode('hex'), x)\
+        current = dict((x.md5hex, x)\
                        for x in index.files)
 
         new = set(candidates) - set(current)

@@ -2,7 +2,7 @@ from cheeseprism import event
 from cheeseprism import pipext
 from cheeseprism import resources
 from cheeseprism.rpc import PyPi
-from path import path
+from .utils import path
 from pyramid.httpexceptions import HTTPFound
 from pyramid.i18n import TranslationStringFactory
 from pyramid.path import DottedNameResolver as dnr

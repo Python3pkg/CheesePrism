@@ -9,7 +9,7 @@ from .jenv import EnvFactory
 from .utils import benchmark
 from functools import partial
 from more_itertools import chunked
-from path import path
+from .utils import path
 from pyramid import threadlocal
 from pyramid.events import ApplicationCreated
 from pyramid.events import subscriber
@@ -222,8 +222,7 @@ class IndexManager(object):
 
     def reg_data(self, arch):
         pkgdata = self.arch_to_add_map(arch)
-        md5 = arch.read_md5().encode('hex')
-        return md5, pkgdata,
+        return arch.md5hex, pkgdata,
 
     def register_archive(self, arch, registry=None):
         """

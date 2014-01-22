@@ -1,13 +1,13 @@
 from ConfigParser import ConfigParser
+from cheeseprism.utils import path
 from cheeseprism.utils import resource_spec
 from itertools import count
 from mock import patch
-from path import path
 from pprint import pformat as pprint
 from pyramid.decorator import reify
 import logging
-import unittest
 import time
+import unittest
 
 
 logger = logging.getLogger(__name__)

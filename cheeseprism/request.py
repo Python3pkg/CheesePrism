@@ -1,5 +1,5 @@
 from cheeseprism.index import IndexManager
-from path import path
+from .utils import path
 from pyramid.security import unauthenticated_userid
 
 

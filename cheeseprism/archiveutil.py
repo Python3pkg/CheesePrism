@@ -1,4 +1,4 @@
-from path import path
+from .utils import path
 import logging
 import pkginfo
 import re
@@ -16,11 +16,10 @@ class ArchiveUtil(object):
     EXTS = re.compile(r'^.*(?P<ext>\.egg|\.gz|\.bz2|\.tgz|\.zip|\.whl)$')
 
     def read(self, (arch, data)):
-        md5 = arch.read_md5().encode('hex')
         pkgdata = None
-        if not md5 in data:
+        if not arch.md5hex in data:
             pkgdata = self.arch_to_add_map(arch)
-        return md5, pkgdata
+        return arch.md5hex, pkgdata
     __call__ = read
 
     def arch_to_add_map(self, arch, error_handler=None):

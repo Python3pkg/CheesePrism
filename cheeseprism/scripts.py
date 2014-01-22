@@ -1,4 +1,4 @@
-from path import path
+from .utils import path
 import argparse
 import sys
 
