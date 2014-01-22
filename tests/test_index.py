@@ -153,13 +153,12 @@ class IndexTestCase(unittest.TestCase):
         pkgs = pkg,
         index = Mock(name='index')
         index.path = self.im.path
-        leaves, archs = bulk_add_pkgs(index, pkgs, register=True)
+        leaves, archs = bulk_add_pkgs(index, pkgs)
 
         assert len(archs) == 1
         assert len(leaves) == 1
         assert 'dummypackage' in leaves
         assert archs[0].basename() == u'dummypackage-0.0dev.tar.gz'
-        assert index.register_archives.called
         assert index.regenerate_leaf.called
 
     def tearDown(self):

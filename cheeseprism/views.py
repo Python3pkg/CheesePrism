@@ -49,8 +49,9 @@ def upload(context, request):
 
         fieldstorage = request.POST['content']
         filename = fieldstorage.filename
-        dest = path(request.file_root) / request.namer(filename)
+        logger.info("%s posted", filename)
 
+        dest = path(request.file_root) / request.namer(filename)
         dest.write_bytes(fieldstorage.file.read())
         try:
             request.registry.notify(event.PackageAdded(request.index, path=dest))

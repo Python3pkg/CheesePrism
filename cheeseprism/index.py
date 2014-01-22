@@ -203,27 +203,27 @@ class IndexManager(object):
             datafile.write_text("{}")
         return {}
 
-    def write_datafile(self, **data):
-        with self.index_data_lock:
-            if self.datafile_path.exists():
-                newdata = data
-                with open(self.datafile_path) as root:
+    def _write_datafile(self, **data):
+        if self.datafile_path.exists():
+            newdata = data
+            with open(self.datafile_path) as root:
                     data = json.load(root)
                     data.update(newdata)
-            with open(self.datafile_path, 'w') as root:
-                json.dump(data, root)
-            return data
+
+        with open(self.datafile_path, 'w') as root:
+            json.dump(data, root)
+        return data
+
+    def write_datafile(self, with_lock=True, **data):
+        if with_lock is True:
+            with self.index_data_lock:
+                return self._write_datafile(**data)
+        return self._write_datafile(**data)
 
     def reg_data(self, arch):
         pkgdata = self.arch_to_add_map(arch)
         md5 = arch.read_md5().encode('hex')
         return md5, pkgdata,
-
-    def register_archives(self, archs):
-        with benchmark("Register %s archives" % len(archs)):
-            data = dict(self.reg_data(arch) for arch in archs)
-            self.write_datafile(**data)
-            return data
 
     def register_archive(self, arch, registry=None):
         """
@@ -232,24 +232,6 @@ class IndexManager(object):
         md5, pkgdata = self.reg_data(arch)
         self.write_datafile(**{md5:pkgdata})
         return pkgdata, md5
-
-    def _update_data(self, archs, datafile):
-        with self.index_data_lock:
-            data = self.data_from_path(datafile)
-            new = []
-            exe = self.executor
-
-            read = self.archive_tool
-            archdata = [(arch, data) for arch in archs]
-            for md5, pkgdata in exe.map(read, archdata):
-                if pkgdata is not None:
-                    data[md5] = pkgdata
-                    new.append(pkgdata)
-
-            with open(datafile, 'w') as root:
-                json.dump(data, root)
-
-            return new
 
     @staticmethod
     def group_by_magnitude(collection):
@@ -270,19 +252,33 @@ class IndexManager(object):
         archs_g = self.group_by_magnitude([x for x in archs])
         with benchmark("Rebuilt /index.json"):
             for archs in archs_g:
-                new.extend(self._update_data(archs, datafile))
+                with self.index_data_lock:
+                    new.extend(self._update_data(archs, datafile))
 
         pkgs = len(set(x['name'] for x in new))
         logger.info("Inspected %s versions for %s packages" %(len(new), pkgs))
+        return new
 
+    def _update_data(self, archs, datafile):
+        data = self.data_from_path(datafile)
+        new = []
+        exe = self.executor
+
+        read = self.archive_tool
+        archdata = [(arch, data) for arch in archs]
+        for md5, pkgdata in exe.map(read, archdata):
+            if pkgdata is not None:
+                data[md5] = pkgdata
+                new.append(pkgdata)
+
+        self.write_datafile(with_lock=False, **data)
         return new
 
 
-def pki_ff(path, handle_error=None, func=IndexManager.pkginfo_from_file):
+def pki_ff(path, handle_error=None, func=IndexManager.at.pkginfo_from_file):
     return path, func(path, handle_error=handle_error)
 
 
-#@@ bad abstraction?
 @subscriber(event.IPackageAdded)
 def rebuild_leaf(event):
     reg = threadlocal.get_current_registry()
@@ -292,8 +288,8 @@ def rebuild_leaf(event):
     if event.rebuild_leaf == False:
         return
 
-    logger.info("Rebuilding leaf for %s" %(event.name))
-    out = event.im.regenerate_leaf(event.name)
+    with benchmark("Rebuilt leaf for %s" %(event.name)):
+        out = event.im.regenerate_leaf(event.name)
     return out
 
 
@@ -303,9 +299,11 @@ def bulk_update_index(event):
     return bulk_add_pkgs(event.index, new_pkgs, register=False)
 
 
-def bulk_add_pkgs(index, new_pkgs, register=False):
+def bulk_add_pkgs(index, new_pkgs):
     """
     Sidestep the event system for efficiency
+
+    @@ requires a prior update
     """
     with benchmark('') as bm:
         leaves = set()
@@ -315,9 +313,8 @@ def bulk_add_pkgs(index, new_pkgs, register=False):
             leaves.add(data['name'])
             archs.append(index.path / data['filename'])
 
-        bm.name = "Bulk add >> register %s archives and rebuild %s leaves" %(len(archs), len(leaves))
-        if register is True:
-            index.register_archives(archs)
+        bm.name = "Bulk add >> register %s archives and rebuild %s leaves"\
+           %(len(archs), len(leaves))
 
         for leaf in leaves:
             try:
@@ -336,7 +333,7 @@ def bulk_update_index_at_start(event):
     logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
 
     new_pkgs = index.update_data()
-    leaves, archs = bulk_add_pkgs(index, new_pkgs, register=False)
+    leaves, archs = bulk_add_pkgs(index, new_pkgs)
 
     home_file = index.path / index.root_index_file
     if index.write_index_html is True and (not home_file.exists() or len(leaves)):
