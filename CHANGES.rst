@@ -1,10 +1,19 @@
 CHANGES
 =======	
 
+0.4.0b2
+=======	
+
+2014-01-22  Whit  <whit@surveymonkey.com>
+	* Refactor md5 calculation to be more memory intensive vs. io intensive
+	* Minor improvement to test coverage
+        * multiprocessing removed in toto
+
+
 0.4.0b0
 =======	
 
-2014-03-07  Whit  <whit@surveymonkey.com>
+2014-01-07  Whit  <whit@surveymonkey.com>
 	* Add request method to overwrite
 	  `webob.request.BaseRequest.request.request_body_tempfile_limit`
 	* Add `cheeseprism.temp_file_limit` configuration value to allow
@@ -24,26 +33,13 @@ CHANGES
 2013-12-19  Whit  <whit@surveymonkey.com>
 	* Chunked updating of index.json for large indexes
 	* Better logging
-
-
-0.4.0a6
-=======	
-
-2013-12-19  Whit  <whit@surveymonkey.com>
 	* Add support for wheels
 	* handle errors when extensions are unrecognized
 	* fix for error wrt empty archive sets
 	* skip registration when `update_data` has already been run
-
-
-	
-0.4.0a5
-=======	
-
-2013-12-19  Whit  <whit@surveymonkey.com>
 	* More optimizations for bulk loading and updating
 	* Skip multiprocessing tests
-	
+
 	
 0.4.0a3
 =======
