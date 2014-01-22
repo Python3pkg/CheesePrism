@@ -263,3 +263,9 @@ class ClassOrStaticMethods(unittest.TestCase):
 
 def test_cleanup():
     assert not IndexTestCase.get_base().dirs()
+
+    
+def test_noop():
+    from cheeseprism.index import noop
+    assert noop() is None
+    

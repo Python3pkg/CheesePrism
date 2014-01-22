@@ -284,9 +284,6 @@ def rebuild_leaf(event):
     logger.debug("Adding %s" %(event.path))
     event.im.register_archive(event.path, registry=reg)
 
-    if event.rebuild_leaf == False:
-        return
-
     with benchmark("Rebuilt leaf for %s" %(event.name)):
         out = event.im.regenerate_leaf(event.name)
     return out
@@ -342,11 +339,7 @@ def bulk_update_index_at_start(event):
 
 
 def async_bulk_update_at_start(event):
-    reg = event.app.registry
-    if reg['cp.executor_type'] == 'process':
-        from multiprocessing import Process as Thread
-    else:
-        from threading import Thread
+    from threading import Thread
     logger.info("Spawning thread to handle bulk update on start")
     Thread(target=bulk_update_index_at_start,
            args=(event,),
