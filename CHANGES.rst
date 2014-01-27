@@ -4,6 +4,11 @@ CHANGES
 0.4.0b2
 =======	
 
+2014-01-27  Whit  <whit@surveymonkey.com>
+	* Make it possible to turn off form button for regeneration
+          form via configuration. Useful for large indexes with button
+          happy users. http endpoint still available.
+
 2014-01-22  Whit  <whit@surveymonkey.com>
 	* Refactor md5 calculation to be more memory intensive vs. io intensive
 	* Minor improvement to test coverage
