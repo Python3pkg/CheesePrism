@@ -43,6 +43,9 @@ def main(global_config, **settings):
     config.add_request_method(lambda req: tempfile_limit,
                               name='request_body_tempfile_limit', reify=True)
 
+    config.add_request_method(lambda req: asbool(settings.get('cheeseprism.disable.regenerate', False)),
+                              name='disable_regen', reify=True)
+
     return config.make_wsgi_app()
 
 

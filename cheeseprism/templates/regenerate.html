@@ -2,6 +2,7 @@
 {%block content%}
 <p>Regenerate index</p>
 <form method='POST'  action='/regenerate-index'> 
-  <input type='submit' value='Go'> 
+  <input type='submit' value='Go' {% if disabled %}disabled{% endif %}> 
 </form>
 {%endblock%}
+

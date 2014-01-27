@@ -128,7 +128,7 @@ def regenerate_index(context, request):
         homefile, leaves = request.index.regenerate_all()
         request.index.update_data()
         return HTTPFound('/index')
-    return {}
+    return {'disabled': request.disable_regen}
 
 
 @view_config(name='load-requirements',
