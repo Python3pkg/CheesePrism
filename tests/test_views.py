@@ -181,7 +181,7 @@ class ViewTests(unittest.TestCase):
         from cheeseprism.views import regenerate_index
         context, request = self.base_cr
         out = regenerate_index(context, request)
-        assert not out
+        assert out['disabled'] == False
         assert isinstance(out, dict)
 
         context, req = self.base_cr
@@ -305,6 +305,7 @@ class CPDummyRequest(testing.DummyRequest):
     _index_data = {}
     _namer = None
     cleanup = []
+    disable_regen = False
 
     @reify
     def namer(self):
