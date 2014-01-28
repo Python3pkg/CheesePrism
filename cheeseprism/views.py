@@ -1,8 +1,10 @@
-from cheeseprism import event
-from cheeseprism import pipext
-from cheeseprism import resources
-from cheeseprism.rpc import PyPi
+from . import event
+from . import pipext
+from . import resources
+from . import utils
+from .rpc import PyPi
 from .utils import path
+from functools import partial
 from pyramid.httpexceptions import HTTPFound
 from pyramid.i18n import TranslationStringFactory
 from pyramid.path import DottedNameResolver as dnr
@@ -16,9 +18,11 @@ import requests
 import tempfile
 
 
+
+
 resolve = dnr(None).maybe_resolve
 logger = logging.getLogger(__name__)
-
+bm = partial(utils.benchmark, logger=logger.info)
 
 _ = TranslationStringFactory('CheesePrism')
 
@@ -37,8 +41,18 @@ def index_view(context, request):
                         for key, value in items]
     return data
 
-@view_config(renderer='index.html', context=resources.App)
+
 @view_config(name='simple', context=resources.App)
+def simple(context, request):
+    response = upload(context, request)
+    if request.method != 'POST':
+        request.response.status_int = 405
+        request.response.headers['Allow'] = 'POST'
+        return response
+    return response
+
+
+@view_config(renderer='index.html', context=resources.App)
 def upload(context, request):
     """
     The interface for disutils upload
@@ -51,16 +65,18 @@ def upload(context, request):
         filename = fieldstorage.filename
         logger.info("%s posted", filename)
 
-        dest = path(request.file_root) / request.namer(filename)
-        dest.write_bytes(fieldstorage.file.read())
-        try:
-            request.registry.notify(event.PackageAdded(request.index, path=dest))
-            request.response.headers['X-Swalow-Status'] = 'SUCCESS'
-            return request.response
-        except :
-            logger.exception("Processing of %s failed", filename)
-            raise
+        with bm("%s released" %filename):
+            dest = path(request.file_root) / request.namer(filename)
+            dest.write_bytes(fieldstorage.file.read())
+            try:
+                request.registry.notify(event.PackageAdded(request.index, path=dest))
+                request.response.headers['X-Swalow-Status'] = 'SUCCESS'
+                return request.response
+            except :
+                logger.exception("Processing of %s failed", filename)
+                raise
     return {}
+
 
 
 @view_config(name='find-packages', renderer='find_packages.html', context=resources.App)
