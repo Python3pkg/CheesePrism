@@ -50,9 +50,7 @@ def main(global_config, **settings):
 
 
 def ping_proc(i):
-    pid = os.getpid()
-    logger.debug("worker %s up: %s", i, pid)
-    return pid
+    return i
 
 
 def setup_workers(registry):

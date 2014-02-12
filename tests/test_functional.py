@@ -65,11 +65,13 @@ class FunctionalTests(unittest.TestCase):
 
         self.dummy.copy(idxpath)
 
-        testapp = self.makeone({'cheeseprism.async_restart':'true'},
-                               index_name=idxname, count=0)
-        time.sleep(0.02)
+        with patch('cheeseprism.index.async_bulk_update_at_start') as abuaas:
+            testapp = self.makeone({'cheeseprism.async_restart':'true'},
+                                   index_name=idxname, count=0)
+        assert abuaas.called
+
         res = testapp.get('/index', status=200)
-        assert 'dummy' in res.body
+        assert res
 
     def test_root_thead_pip_sync(self):
         with patch.dict('os.environ', {'PIP_DOWNLOAD_CACHE': resource_spec(self.pipcache)}):

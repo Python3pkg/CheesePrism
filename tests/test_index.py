@@ -5,6 +5,7 @@ from mock import Mock
 from mock import patch
 from pprint import pformat as pprint
 from stuf import stuf
+import json
 import futures
 import logging
 import textwrap
@@ -36,16 +37,28 @@ class IndexTestCase(unittest.TestCase):
     @property
     def base(self): return self.get_base()
 
-    def make_one(self, index_name='test-index', pkg='dummy'):
+    def make_one(self, pkg='dummy', index_path=None):
         from cheeseprism import index
-        self.count = next(self.counter)
         executor = futures.ThreadPoolExecutor(1)
-        index_path = self.base / ("%s-%s" %(self.count, index_name))
+        if index_path is None:
+            index_path = self.new_path('test-index')
         idx = index.IndexManager(index_path, executor=executor)
         pkg = getattr(self, pkg)
         pkg.copy(idx.path)
         self.dummypath = idx.path / pkg.name
         return idx
+
+    def new_path(self, index_name):
+        count = self.count = next(self.counter)
+        return self.base / ("%s-%s" %(count, index_name))
+
+    def test_index_init_baderrorfolder(self):
+        bfp = self.new_path('badfolder')
+        bfp.mkdir()
+        (bfp / '_errors').touch()
+        idx = self.make_one(index_path=bfp)
+        assert '_errors' in {x.name for x in idx.path.dirs()}
+        assert '_errors.bak' in {x.name for x in idx.path.files()}
 
     def test_register_archive(self):
         self.im = self.make_one()
@@ -79,9 +92,9 @@ class IndexTestCase(unittest.TestCase):
         assert data['hello'] == 'operator'
         assert self.im.data_from_path(self.im.datafile_path)['hello'] == 'operator'
 
-    def test_regenerate_index_write_index_html_false(self):
+    def test_regenerate_index_write_html_false(self):
         im = self.make_one()
-        im.write_index_html = False
+        im.write_html = False
         home, leaves = im.regenerate_all()
         pth = im.path
         assert home is None
@@ -101,7 +114,7 @@ class IndexTestCase(unittest.TestCase):
 
         assert len(leaves) == 1
         assert leaves[0].exists()
-        assert leaves[0].name == 'index.html'
+        assert leaves[0].name == 'index.json'
         assert leaves[0].parent.name == 'dummypackage'
 
         etxt = pprint(sorted(str(x) for x in expected))
@@ -118,18 +131,131 @@ class IndexTestCase(unittest.TestCase):
 
                 %s""") %(etxt, fstxt)
 
-    @patch('cheeseprism.index.IndexManager.regenerate_leaf')
-    def test_regenerate_leaf_event(self, rl):
+
+
+    def test_leafdata(self):
+        self.im = self.make_one()
+        fpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        dist = Mock(name='dist')
+        distinfo = dist.name, dist.version = 'distname', 'version'
+        data = self.im.leafdata(fpath, dist)
+        assert distinfo == (data['name'], data['version'])
+        assert data['md5'] == fpath.md5hex
+        assert data['size'] == fpath.size
+        assert data['filename'] == fpath.name
+        assert 'mtime' in data
+        assert data['ctime'] == fpath.ctime
+        assert 'atime' in data
+
+    def test_rebuild_leaf_subscriber(self):
         """
         Cover event subscriber
         """
         from cheeseprism.event import PackageAdded
         from cheeseprism.index import rebuild_leaf
         self.im = self.make_one()
-        event = PackageAdded(self.im, here / path('dummypackage2/dist/dummypackage-0.1.tar.gz'))
-        out = rebuild_leaf(event)
+        event = PackageAdded(self.im,  here / path('dummypackage2/dist/dummypackage-0.1.tar.gz'))
+
+        with patch('cheeseprism.index.IndexManager.regenerate_leaf') as rl:
+            out = rebuild_leaf(event)
         assert out is not None
         assert rl.call_args == (('dummypackage',), {})
+
+    def test_rebuild_leaf_subscriber_existing_leaf(self):
+        from cheeseprism.event import PackageAdded
+        from cheeseprism.index import rebuild_leaf
+        self.im = self.make_one()
+
+        self.im.regenerate_leaf('dummypackage')
+
+        distpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        event = PackageAdded(self.im, path=distpath)
+        out = rebuild_leaf(event)
+
+        assert len(out) == 2
+
+    def test_html_free_remove_index(self):
+        idx = self.make_one()
+        home, leaves = idx.regenerate_all()
+        free_gen = idx._leaf_html_free(idx.path / 'dummypackage', idx.path.files("*.gz"))
+        linkout = next(free_gen)
+        assert 'index.html' not in {f.name for f in linkout.parent.files()}
+
+    def test__html_free_leafdir_disappears(self):
+        idx = self.make_one()
+        home, leaves = idx.regenerate_all()
+        leafdir = idx.path / 'dummypackage'
+        free_gen = idx._leaf_html_free(leafdir, idx.path.files("*.gz"))
+        leafdir.rmtree()
+        with self.assertRaises(StopIteration):
+            next(free_gen)
+
+    def test__html_free_version_disappears(self):
+        idx = self.make_one()
+        home, leaves = idx.regenerate_all()
+        leafdir = idx.path / 'dummypackage'
+        versions = idx.path.files('*.gz')
+        [x.remove() for x in versions]
+        free_gen = idx._leaf_html_free(leafdir, versions)
+        with self.assertRaises(StopIteration):
+            next(free_gen)
+
+    def test_add_version_to_leaf_html_free(self):
+        idx = self.make_one()
+        idx.write_html = False
+
+        name = 'dummypackage'
+        idx.regenerate_leaf(name)
+
+        distpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        data = idx.add_version_to_leaf(distpath, name)
+        assert len(data) == 2
+        assert all(x.islink() for x in (idx.path / name).files("*.gz"))
+
+    def test_cleanup_links_version_removed(self):
+        idx = self.make_one()
+        idx.write_html = False
+
+        name = 'dummypackage'
+        idx.regenerate_leaf(name)
+
+        leafdir = idx.path / name
+        leafjson = leafdir / 'index.json'
+
+        rem, miss = idx.cleanup_links(leafdir, leafjson, [])
+        assert len(rem) == 1
+        assert rem[0].name == 'dummypackage-0.0dev.tar.gz'
+
+    def test_cleanup_links_archive_missing(self):
+        idx = self.make_one()
+        idx.write_html = False
+
+        name = 'dummypackage'
+        idx.regenerate_leaf(name)
+
+        leafdir = idx.path / name
+        leafjson = leafdir / 'index.json'
+
+        badpath = Mock()
+        badpath.name = 'dummypackage-0.0dev.tar.gz'
+        badpath.exists.return_value = False
+
+        rem, miss = idx.cleanup_links(leafdir, leafjson, [badpath])
+        assert len(miss) == 1
+        assert miss[0] == badpath.name
+        assert leafjson.text() == '[]'
+
+    def test_add_version_to_leaf_nodups(self):
+        self.im = self.make_one()
+
+        name = 'dummypackage'
+        self.im.regenerate_leaf(name)
+
+        distpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+
+        data = self.im.add_version_to_leaf(distpath, name)
+        data = self.im.add_version_to_leaf(distpath, name)
+        assert len(data) == 2
 
     def test_regenerate_leaf(self):
         self.im = self.make_one()
@@ -137,12 +263,40 @@ class IndexTestCase(unittest.TestCase):
         leafindex = self.im.path / 'dummypackage/index.html'
         new_arch = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
         new_arch.copy(self.im.path)
-        added = self.im.path / new_arch.name
 
+        added = self.im.path / new_arch.name
         before_txt = leafindex.text()
         info = self.im.pkginfo_from_file(added)
         out = self.im.regenerate_leaf(info.name)
         assert before_txt != out.text()
+
+    def test_no_leaf_index_write_html_false(self):
+        """
+        leaf index should not exist if index.write_html is False
+        """
+        self.im = self.make_one()
+        self.im.write_html = False
+        [x for x in self.im.regenerate_all()]
+
+        leafindex = self.im.path / 'dummypackage/index.html'
+        assert not leafindex.exists()
+
+    def test_regenerate_leaf_html_free(self):
+        self.im = self.make_one()
+        self.im.write_html = False
+        [x for x in self.im.regenerate_all()]
+
+        new_arch = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        new_arch.copy(self.im.path)
+        added = self.im.path / new_arch.name
+
+        info = self.im.pkginfo_from_file(added)
+        out = self.im.regenerate_leaf(info.name)
+        with open(out) as fd:
+            data = json.load(fd)
+        assert new_arch.name in set([x['filename'] for x in data])
+        symlink = out.parent / new_arch.name
+        assert symlink.exists() is True
 
     @patch('pyramid.threadlocal.get_current_registry')
     def test_bulk_add_pkg(self, getreg):
@@ -160,6 +314,18 @@ class IndexTestCase(unittest.TestCase):
         assert 'dummypackage' in leaves
         assert archs[0].basename() == u'dummypackage-0.0dev.tar.gz'
         assert index.regenerate_leaf.called
+
+    @patch('pyramid.threadlocal.get_current_registry')
+    def test_bulk_add_pkg_regen_error(self, getreg):
+        with patch('cheeseprism.index.IndexManager.regenerate_leaf') as rl:
+            rl.side_effect = ValueError('BAAAAAAD')
+            from cheeseprism.index import bulk_add_pkgs
+
+            idx = self.make_one()
+            pkg = stuf(name='dummypackage', version='0.1',
+                       filename=self.dummy.name)
+            pkgs = pkg,
+            assert bulk_add_pkgs(idx, pkgs)
 
     def tearDown(self):
         logger.debug("teardown: %s", self.count)
@@ -261,11 +427,29 @@ class ClassOrStaticMethods(unittest.TestCase):
             with patch('pkginfo.bdist.BDist', side_effect=exc):
                 IndexManager.pkginfo_from_file('bad.egg')
 
+
 def test_cleanup():
     assert not IndexTestCase.get_base().dirs()
 
-    
+
 def test_noop():
     from cheeseprism.index import noop
     assert noop() is None
-    
+
+
+def test_async_bulk_update_at_start():
+    from cheeseprism.index import async_bulk_update_at_start as func
+    event = Mock()
+    thread_ctor = Mock()
+    func(event, thread=thread_ctor)
+
+
+def test_bulk_update_subscriber():
+    from cheeseprism.index import bulk_update_index
+    from cheeseprism.event import IndexUpdate
+    event = Mock(name='event', spec=IndexUpdate(Mock(), Mock()))
+    idx = event.index = Mock(name='idx')
+    idx.attach_mock(Mock(return_value=[]), 'update_data')
+
+    with patch('cheeseprism.index.bulk_add_pkgs', return_value=True):
+        assert bulk_update_index(event) == True

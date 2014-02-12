@@ -2,16 +2,19 @@ from zope.interface import Attribute
 from zope.interface import Interface
 from zope.interface import implements
 
+
 class IIndexEvent(Interface):
     """
     An lower level event involving the index
     """
 
+    
 class IIndexUpdate(Interface):
     """
     An low level event involving the index
     """
 
+    
 class IPackageEvent(IIndexEvent):
     """
     An event involving a package

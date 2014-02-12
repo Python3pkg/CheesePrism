@@ -18,8 +18,6 @@ import requests
 import tempfile
 
 
-
-
 resolve = dnr(None).maybe_resolve
 logger = logging.getLogger(__name__)
 bm = partial(utils.benchmark, logger=logger.info)

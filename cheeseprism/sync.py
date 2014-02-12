@@ -35,9 +35,9 @@ def update_index(index, reg):
         new_pkgs = index.update_data()
         if index.path.exists(): #for testing
             with utils.benchmark("New packages notifier: %s" %new_pkgs):
-                leaves, archs = bulk_add_pkgs(index, new_pkgs, register=False)
+                leaves, archs = bulk_add_pkgs(index, new_pkgs)
 
-            if index.write_index_html is True \
+            if index.write_html is True \
               and not all((index.datafile_path.exists(), index.home_file.exists())):
                 index.write_index_home(index.projects_from_archives())
 
