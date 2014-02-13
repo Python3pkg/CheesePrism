@@ -40,7 +40,5 @@ setup(name='CheesePrism',
       entry_points = """\
       [paste.app_factory]
       main = cheeseprism.wsgiapp:main
-      [console_scripts]
-      cp-mc = cheeseprism.scripts:mc
       """
       )
