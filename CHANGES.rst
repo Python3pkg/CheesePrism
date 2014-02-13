@@ -1,6 +1,16 @@
 CHANGES
 =======	
 
+0.4.0b4
+=======	
+2014-01-13 Whit <whit@surveymonkey.com>	
+
+	* html_free: now possible to run cp totally off of nginx directory
+	  view.
+	* faster package index.html rebuilds (on slow disks)
+	
+
+	
 0.4.0b2
 =======	
 
