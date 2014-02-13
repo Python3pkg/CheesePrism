@@ -341,6 +341,7 @@ class IndexManager(object):
         return data
 
     def write_datafile(self, with_lock=True, **data):
+        #@@ consider removing
         if with_lock is True:
             with self.index_data_lock:
                 return self._write_datafile(**data)

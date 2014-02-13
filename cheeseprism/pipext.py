@@ -187,7 +187,7 @@ class RequirementDownloader(object):
         iu = [x for x in cls.index_urls]
         if index_urls:
             iu.extend(index_urls)
-        finder = cls.pkg_finder_class(find_links=[], index_urls=iu)
+        finder = cls.pkg_finder_class(find_links=[], index_urls=iu, process_dependency_links=True)
         if deplinks:
             finder.add_dependency_links(deplinks)
         return finder
