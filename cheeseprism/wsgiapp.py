@@ -6,7 +6,6 @@ from pyramid.session import UnencryptedCookieSessionFactoryConfig
 from pyramid.settings import asbool
 import futures
 import logging
-import os
 
 
 logger = logging.getLogger(__name__)

@@ -376,7 +376,7 @@ class IndexManager(object):
         new = []
 
         archs_g = self.group_by_magnitude([x for x in archs])
-        with benchmark("Rebuilt /index.json"):
+        with benchmark("Rebuilt root index.json"):
             for archs in archs_g:
                 with self.index_data_lock:
                     new.extend(self._update_data(archs, datafile))
@@ -444,7 +444,7 @@ def bulk_add_pkgs(index, new_pkgs):
             leaves.add(data['name'])
             archs.append(index.path / data['filename'])
 
-        bm.name = "Bulk add >> register %s archives and rebuild %s leaves"\
+        bm.name = "Added & registered %s archives and rebuilt %s leaves"\
            %(len(archs), len(leaves))
 
         for leaf in leaves:
@@ -457,20 +457,24 @@ def bulk_add_pkgs(index, new_pkgs):
 
 
 def bulk_update_index_at_start(event):
-    logger.info("--> Checking and updating index")
-    reg = event.app.registry
+    with benchmark('Bulk update complete'):
+        logger.info("--> Checking and updating index")
+        reg = event.app.registry
 
-    index = IndexManager.from_registry(reg)
-    logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
+        index = IndexManager.from_registry(reg)
+        logger.info("-- %s pkg in %s", len([x for x in index.files]), index.path.abspath())
 
-    new_pkgs = index.update_data()
-    leaves, archs = bulk_add_pkgs(index, new_pkgs)
+        new_pkgs = index.update_data()
 
-    home_file = index.path / index.root_index_file
-    if index.write_html is True and (not home_file.exists() or len(leaves)):
-        items = index.projects_from_archives()
-        index.write_index_home(items)
-    return leaves, archs
+        logger.info("-- Bulk add %d packages", len(new_pkgs))
+        leaves, archs = bulk_add_pkgs(index, new_pkgs)
+
+        home_file = index.path / index.root_index_file
+        if index.write_html is True and (not home_file.exists() or len(leaves)):
+            items = index.projects_from_archives()
+            index.write_index_home(items)
+
+        return leaves, archs
 
 
 def async_bulk_update_at_start(event, thread=Thread):
