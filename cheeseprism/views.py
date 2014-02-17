@@ -138,9 +138,10 @@ package = from_pypi
 @view_config(name='regenerate-index', renderer='regenerate.html', context=resources.App)
 def regenerate_index(context, request):
     if request.method == 'POST':
-        logger.debug("Regenerate index")
-        homefile, leaves = request.index.regenerate_all()
-        request.index.update_data()
+        with utils.benchmark("-- Regenerated index"):
+            logger.debug("Regenerate index")
+            homefile, leaves = request.index.regenerate_all()
+            request.index.update_data()
         return HTTPFound('/index')
     return {'disabled': request.disable_regen}
 
