@@ -222,7 +222,7 @@ class IndexManager(object):
         leafdir = self.path / leafname
         leafjson = leafdir / indexjson
         with self.lock_leaf_json(leafname, leafjson) as leafdata:
-            if fpath.md5hex in set([self.getmd5(x) for x in leafdata]):
+            if fpath.name in set([x['filename'] for x in leafdata]):
                 self.log.warning("%s - Attempt to add duplicate to %s", fpath, leafjson)
                 return leafdata
             leafdata.append(self.leafdata(fpath, dist))
@@ -258,13 +258,13 @@ class IndexManager(object):
                             (self.leaf_values_from_map(leafname, datum) for datum in leafdata),
                             indexhtml="index.html")
         else:
-            versions = (self.path / x['name'] for x in leafdata) #@@ maybe on link what needs to be?
+            versions = (self.path / x['filename'] for x in leafdata) #@@ maybe on link what needs to be?
             linked = [x for x in \
                       self._leaf_html_free(leafdir, versions, indexhtml="index.html") if x]
 
             self.log.debug("Linked: %s", linked)
 
-            active_archives = (self.path / x['name'] for x in leafdata)
+            active_archives = (self.path / x['filename'] for x in leafdata)
             self.log.debug("Removed: %s",
                            self.cleanup_links(leafdir,
                                               leafdir / indexjson,
