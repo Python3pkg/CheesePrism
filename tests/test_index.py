@@ -5,9 +5,10 @@ from mock import Mock
 from mock import patch
 from pprint import pformat as pprint
 from stuf import stuf
-import json
 import futures
+import json
 import logging
+import subprocess
 import textwrap
 import unittest
 
@@ -208,6 +209,7 @@ class IndexTestCase(unittest.TestCase):
         idx.regenerate_leaf(name)
 
         distpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        distpath.copy(idx.path / distpath.name)
         data = idx.add_version_to_leaf(distpath, name)
         assert len(data) == 2
         assert all(x.islink() for x in (idx.path / name).files("*.gz"))
@@ -246,16 +248,48 @@ class IndexTestCase(unittest.TestCase):
         assert leafjson.text() == '[]'
 
     def test_add_version_to_leaf_nodups(self):
-        self.im = self.make_one()
+        idx = self.make_one()
 
         name = 'dummypackage'
-        self.im.regenerate_leaf(name)
+        idx.regenerate_leaf(name)
 
         distpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+        distpath.copy(idx.path / distpath.name)
 
-        data = self.im.add_version_to_leaf(distpath, name)
-        data = self.im.add_version_to_leaf(distpath, name)
+        data = idx.add_version_to_leaf(distpath, name)
+        assert idx.path.exists()
+
+
+        data = idx.add_version_to_leaf(distpath, name)
         assert len(data) == 2
+
+    def test_add_version_to_leaf_w_remove_file_cleans_up_leafdata(self):
+        idx = self.make_one()
+        idx.write_html = False
+        name = 'dummypackage'
+
+        leafpath = idx.path / name
+        distpath = here / path('dummypackage2/dist/dummypackage-0.1.tar.gz')
+
+        idx.regenerate_leaf(name)
+        distpath.copy(idx.path)
+
+        assert len(leafpath.files()) == 2
+
+        distpath = idx.path / distpath.name
+        data = idx.add_version_to_leaf(distpath, name)
+
+        distpath2 = idx.path / self.dum_whl.name
+        self.dum_whl.copy(distpath2)
+        data = idx.add_version_to_leaf(distpath2, name)
+
+        assert len(data) == 3
+        assert (leafpath / distpath.name).exists()
+
+        distpath.remove()
+
+        leafdata = idx.cleanup_leafdata(leafpath, leafpath / 'index.json')
+        assert len(leafdata) == 2
 
     def test_regenerate_leaf(self):
         self.im = self.make_one()

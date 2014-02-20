@@ -176,20 +176,25 @@ class IndexManager(object):
 
     def _leaf_html_free(self, leafdir, versions, indexhtml="index.html"):
         leafhome = leafdir / indexhtml
+        if not leafdir.exists():
+            self.log.error("leafdir %s has disappeared" %leafdir)
+            raise StopIteration('Leaf dir missing %s' %leafdir)
+
         if leafhome.exists():
-            self.log.info("Removing %s", leafhome)
+            self.log.info("HTML FREE: Removing %s", str(leafhome))
             leafhome.remove_p()
 
-        if leafdir.exists():
-            for filepath in versions:
-                target = leafdir / filepath.name
-                if filepath.exists():
-                    if not target.exists():
-                        yield filepath.symlink(target)
-                else:
-                    self.log.error("file %s has disappeared" %filepath)
-        else:
-            self.log.error("leafdir %s has disappeared" %leafdir)
+        for filepath in versions:
+            target = leafdir / filepath.name
+            if filepath.exists():
+                if not target.exists():
+                    yield filepath.symlink(target.abspath())
+            else:
+                self.log.error("file %s has disappeared, removing link" %filepath)
+                #@@ figure out the coverage issue here
+                if target.exists():
+                    self.log.debug("-- removing link: %s" %target)
+                    target.unlink()
 
     def leaf_values_from_archive(self, leafname, archive):
         url = str(path(self.arch_baseurl) / archive.name)
@@ -269,15 +274,21 @@ class IndexManager(object):
                            self.cleanup_links(leafdir,
                                               leafdir / indexjson,
                                               active_archives))
+            leafdata = self.cleanup_leafdata(leafdir, leafdir / indexjson)
+        return leafdata
 
+    def cleanup_leafdata(self, leafdir, leafjson):
+        with self.lock_leaf_json(str(leafdir.name), leafjson) as leafdata:
+            missing = [idx for idx, fn in enumerate(x['filename'] for x in leafdata) if not (leafdir / fn).exists()]
+            [leafdata.pop(idx) for idx in missing]
         return leafdata
 
     def cleanup_links(self, leafdir, leafjson, active_archives):
-        targets = dict((version.name, version.exists()) for version in active_archives)
+        targets = dict((str(version.name), version.exists()) for version in active_archives)
         archive_missing, removed = set(), []
 
         for link in (x for x in leafdir.files() if x.islink()):
-            target = targets.get(link.name, None)
+            target = targets.get(str(link.name), None)
             if target is None:
                 link.unlink()
                 removed.append(link)
@@ -286,23 +297,21 @@ class IndexManager(object):
                 link.unlink()
                 archive_missing.add(link.name)
 
-        logging.warn("Archives missing: %s", archive_missing)
-
         if archive_missing:
+            logging.warn("Archives missing: %s", archive_missing)
             with self.lock_leaf_json(leafdir.name, leafjson) as leafdata:
-                dels = [i for i, data in enumerate(leafdata) if data['filename'] in archive_missing]
+                dels = [i - 1 for i, data in enumerate(leafdata) if data['filename'] in archive_missing]
                 archive_missing = [leafdata.pop(i)['filename'] for i in dels]
 
         return removed, archive_missing
 
     #@@ combine with regenerate_leaf
     def write_leaf(self, leafdir, versions, indexjson="index.json", indexhtml="index.html"):
-        if not leafdir.exists():
-            leafdir.makedirs()
-
         leafjson = leafdir / indexjson
-
         versions = list(versions)
+
+        if not leafdir.exists(): leafdir.makedirs()
+
         if self.write_html is True:
             tversions = (self.leaf_values_from_archive(leafdir.name, archive)\
                          for info, archive in versions)
