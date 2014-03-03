@@ -86,6 +86,12 @@ class RequirementDownloader(object):
             archive = tarfile.TarFile.open(filename)
             names = archive.getnames()
             read = partial(cls.readtar, archive)
+        elif filename.endswith('whl'):
+            return [], [],
+        else:
+            logger.error("Unrecognized file type: %s", filename)
+            return [], [],
+        
         dl_file = cls.find_file(names, '.egg-info/dependency_links.txt')
         reqs_file = cls.find_file(names, '.egg-info/requires.txt')        
         deplinks = dl_file and read(dl_file) or ''
