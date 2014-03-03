@@ -54,7 +54,7 @@ class FunctionalTests(unittest.TestCase):
 
         settings = xtra and dict(settings, **xtra) or settings
         app = main(defaults, **settings)
-
+        self.executor = app.registry['cp.executor']
         from webtest import TestApp
         return TestApp(app)
 
@@ -99,6 +99,8 @@ class FunctionalTests(unittest.TestCase):
             logger.debug(pprint(dirs))
             time.sleep(0.02)
             logger.debug(pprint([x.rmtree() for x in dirs]))
+        if hasattr(self, 'executor'):
+            self.executor.shutdown()
 
 
 def request_size_check(config):
