@@ -3,6 +3,11 @@ CHANGES
 
 0.4.0b4
 =======	
+2014-03-03 Whit <whit@surveymonkey.com>	
+
+	* html_free fixes: proper culling of index.json files
+	* support for wheel format in requirements files uploads
+
 2014-01-13 Whit <whit@surveymonkey.com>	
 
 	* html_free: now possible to run cp totally off of nginx directory
