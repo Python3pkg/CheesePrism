@@ -1,11 +1,13 @@
 from cheeseprism.utils import path
 from cheeseprism.utils import resource_spec
+from cheeseprism.archiveutil import ArchiveUtil
 from itertools import count
 from mock import Mock
 from mock import patch
 from pip.exceptions import DistributionNotFound
 from pip.index import Link
 from pip.index import PackageFinder
+
 from pprint import pformat as pp
 from urllib2 import HTTPError
 import logging
@@ -24,6 +26,7 @@ class PipExtBase(unittest.TestCase):
                  se=(here / 'something_else/dist/something_else-2.0.tar.gz'))
 
     filename = here / 'req-1.txt'
+    at = ArchiveUtil()
 
     @classmethod
     def get_base(cls):
@@ -208,7 +211,22 @@ class TestReqDownloaderHandler(PipExtBase):
         assert path_to_sdist == self.dists['dp2']
         assert deps.requirements.keys() == ['something-else'], deps.requirements.keys()
 
+    def test_handle_requirement_w_whl(self, download_url):
+        rd = self.makeone()
+        req = rd.req_set.requirements.values().pop()
+        fp = here / 'dummypackage/dist/dummypackage-0.0dev-py27-none-any.whl'
+        download_url.return_value = (self.at.pkginfo_from_file(fp), fp)
+        (pkginfo, path_to_sdist, deps) = rd.handle_requirement(req, self.mock_finder)
+        assert deps is None, deps         
+        assert pkginfo.name == 'dummypackage'
+        assert path_to_sdist == fp
 
+        
+def test_unrecognized_extension():
+    from cheeseprism.pipext import RequirementDownloader
+    assert RequirementDownloader.depinfo_for_file('wat.wat') == ([], [])
+
+            
 @patch('cheeseprism.pipext.RequirementDownloader.handle_requirement')
 class TestReqDownloaderAll(PipExtBase):
 

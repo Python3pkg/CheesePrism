@@ -82,7 +82,8 @@ class RequirementDownloader(object):
             archive = zipfile.ZipFile(filename)
             names = archive.namelist()
             read = partial(cls.readzip, archive)
-        elif filename.endswith('gz') or filename.endswith('bz2'):
+        elif filename.endswith('gz') \
+          or filename.endswith('bz2'):
             archive = tarfile.TarFile.open(filename)
             names = archive.getnames()
             read = partial(cls.readtar, archive)
