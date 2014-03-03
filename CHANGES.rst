@@ -8,6 +8,7 @@ CHANGES
 
 	* html_free fixes: proper culling of index.json files
 	* support for wheel format in requirements files uploads
+        * clean up threading in functional testsb
 
 2014-01-13 Whit <whit@surveymonkey.com>	
 

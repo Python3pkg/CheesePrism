@@ -233,6 +233,7 @@ It returns a list of the available versions for the package::
 
   [{"version": "1.0.1", 
     "name": "mock", 
+    "size": 818644,
     "mtime": 1381377142.0, 
     "atime": 1381377142.0, 
     "ctime": 1381377142.0, 
@@ -287,10 +288,13 @@ Skip writing index.html
 Use directory listing in nginx renderers has some advantages over
 using the Cheeseprism generated index (byte counts, see all the files,
 etc, faster index updating). This configuration option tells
-CheesePrism to skip creating the index.html::
+CheesePrism to skip creating the index.html for the root directory or
+the package directories::
 
-  cheeseprism.write_index_html = false
+  cheeseprism.write_html = false
 
+With html generation turned off, Cheeseprism manages hyperlinks by
+creating symlinks.
 
 
 
