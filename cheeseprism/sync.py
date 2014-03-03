@@ -34,7 +34,8 @@ def update_index(index, reg):
     with utils.benchmark('Update index after sync'):
         new_pkgs = index.update_data()
         if index.path.exists(): #for testing
-            with utils.benchmark("New packages notifier: %s" %new_pkgs):
+            pkgnames = [x['filename'] for x in new_pkgs]
+            with utils.benchmark("New packages notifier: %s" %pkgnames):
                 leaves, archs = bulk_add_pkgs(index, new_pkgs)
 
             if index.write_html is True \
