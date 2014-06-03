@@ -30,7 +30,8 @@ class PyPi(object):
     @classmethod
     def search(cls, package_name):
         client = xmlrpclib.ServerProxy(cls.index)
-        return client.package_releases(package_name)
+        show_hidden = True
+        return client.package_releases(package_name, show_hidden)
 
     ### for additional information
     @classmethod
