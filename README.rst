@@ -8,8 +8,7 @@ A simple application for managing a static python package index.  It
 borrows heavily from `BasketWeaver
 <https://github.com/binarydud/basket-weaver>`_ and `cheese_emporium
 <git@github.com:binarydud/cheese_emporium.git>`_.  It leverages `pip
-<https://github.com/pypa/pip>`_ and setuptools/`distribute
-<http://pypi.python.org/pypi/distribute>`_ for various package
+<https://github.com/pypa/pip>`_ and setuptools for various package
 management tasks.
 
 
@@ -222,7 +221,7 @@ There is also rudimentary read only json api::
 The resulting json is a hash of objects keyed by md5 hashes of each
 archive. Let's imagine our index only holds webob:
 
-.. code-block:: json
+.. code-block:: python
 
   {u'1b6795baf23f6c1553186a0a8b1a2621':{u'added': 1325609450.792506,
                                         u'filename': u'WebOb-1.2b2.zip',
