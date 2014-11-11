@@ -8,8 +8,7 @@ A simple application for managing a static python package index.  It
 borrows heavily from `BasketWeaver
 <https://github.com/binarydud/basket-weaver>`_ and `cheese_emporium
 <git@github.com:binarydud/cheese_emporium.git>`_.  It leverages `pip
-<https://github.com/pypa/pip>`_ and setuptools/`distribute
-<http://pypi.python.org/pypi/distribute>`_ for various package
+<https://github.com/pypa/pip>`_ and setuptools for various package
 management tasks.
 
 
@@ -37,7 +36,7 @@ There are 2 main ways to get your CheesePrism up and running depending
 on your particular needs.
 
 
- 2. Pip install the package from pypi:
+ 1. Pip install the package from pypi:
 
     Activate your virtual env. Then either check out the code to your chosen location::
 
@@ -47,7 +46,7 @@ on your particular needs.
 
     $ cd CheesePrism; pip install -e ./
 
- 3. Pip install the source:
+ 2. Pip install the source:
 
     Use pip to clone and install directly to ``$VIRTUAL_ENV/src``::
 
@@ -140,7 +139,9 @@ Release into your index
 
 CheesePrism understand the upload interface of pypi. This means for
 python2.6 and better you can setup your ``~/.pypirc`` and then upload to
-your prism as you would `pypi <http://pypi.python.org/pypi>`_::
+your prism as you would `pypi <http://pypi.python.org/pypi>`_:
+
+.. code-block:: ini
 
  [distutils]
     index-servers =
@@ -218,7 +219,9 @@ There is also rudimentary read only json api::
   $ curl GET http://mycheese/index/index.json
 
 The resulting json is a hash of objects keyed by md5 hashes of each
-archive. Let's imagine our index only holds webob::
+archive. Let's imagine our index only holds webob:
+
+.. code-block:: python
 
   {u'1b6795baf23f6c1553186a0a8b1a2621':{u'added': 1325609450.792506,
                                         u'filename': u'WebOb-1.2b2.zip',
@@ -229,7 +232,9 @@ There is a per package api also (say mock is in our index)::
 
   $ curl GET http://mycheese/index/mock/index.json
 
-It returns a list of the available versions for the package::
+It returns a list of the available versions for the package:
+
+.. code-block:: json
 
   [{"version": "1.0.1", 
     "name": "mock", 
@@ -250,8 +255,8 @@ following will download the file from pypi and register it with the index::
  $ curl GET http://mycheese/package/{name}/{version}
 
 
-Advance Feature Configuration
-=============================
+Advanced Feature Configuration
+==============================
 
 Cheeseprism has a few knobs that might help adapt it to your usecase.
 
@@ -263,7 +268,9 @@ Occasionally we find ourself needing to populate a virtualenv and
 lacking network access.  Cheeseprism includes an optional that will,
 upon starting cheeseprism, copy and index all packages in your
 `PIP_DOWNLOAD_CACHE` folder, thus making them available to
-install. Add this line to your ini::
+install. Add this line to your ini:
+
+.. code-block:: ini
 
   cheeseprism.pipcache_mirror=true
 
@@ -274,7 +281,9 @@ Configure Concurrency for index management
 Under the hood for highly repetive tasks, Cheeseprism uses `futures`
 to speed certain operations.
 
-The number of workers may be configured by::
+The number of workers may be configured by:
+
+.. code-block:: ini
 
   cheeseprism.futures.workers = 12  
 
@@ -289,7 +298,9 @@ Use directory listing in nginx renderers has some advantages over
 using the Cheeseprism generated index (byte counts, see all the files,
 etc, faster index updating). This configuration option tells
 CheesePrism to skip creating the index.html for the root directory or
-the package directories::
+the package directories:
+
+.. code-block:: ini
 
   cheeseprism.write_html = false
 
@@ -336,5 +347,4 @@ Pull requests welcome!
 
 I'm on freenode at *#pyramid*, ``whit`` most days if you have
 questions or comments.
-
 
