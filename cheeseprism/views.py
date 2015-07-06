@@ -14,6 +14,7 @@ from urllib2 import HTTPError
 from urllib2 import URLError
 from webob import exc
 import logging
+import pkg_resources
 import requests
 import tempfile
 
@@ -69,6 +70,12 @@ def upload(context, request):
             try:
                 request.registry.notify(event.PackageAdded(request.index, path=dest))
                 request.response.headers['X-Swalow-Status'] = 'SUCCESS'
+                try:
+                    for ep in pkg_resources.iter_entry_points('cheeseprism.on_upload'):
+                        func = ep.load()
+                        func(context, request, dest)
+                except Exception as e:
+                    logger.exception('Entry point %r failed', ep)
                 return request.response
             except :
                 logger.exception("Processing of %s failed", filename)
