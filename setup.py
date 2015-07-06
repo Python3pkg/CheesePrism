@@ -17,6 +17,10 @@ requires = ['Jinja2',
             'pip<1.6,>1.4',
             'more-itertools']
 
+extras_require = {
+    'devpi':  ['devpi-client'],
+}
+
 version='0.4.0b5'
 
 setup(name='CheesePrism',
@@ -37,8 +41,11 @@ setup(name='CheesePrism',
       include_package_data=True,
       zip_safe=False,
       install_requires=requires,
+      extras_require=extras_require,
       entry_points = """\
       [paste.app_factory]
       main = cheeseprism.wsgiapp:main
+      [cheeseprism.on_upload]
+      devpi = cheeseprism.devpi:upload
       """
       )
