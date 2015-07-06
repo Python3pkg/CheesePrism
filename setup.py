@@ -8,7 +8,7 @@ CHANGES = open(os.path.join(here, 'CHANGES.rst')).read()
 
 requires = ['Jinja2',
             'Paste',
-            'futures',
+            'futures<3',
             'path.py',
             'pkginfo>=1.2b1',
             'pyramid',
