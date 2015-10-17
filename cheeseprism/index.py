@@ -20,6 +20,7 @@ from threading import Thread
 import json
 import logging
 import operator
+import pkg_resources
 import re
 import threading
 import time
@@ -141,7 +142,8 @@ class IndexManager(object):
         files = self.path.files('%s-*.*' %leafname)
 
         pki_ff = partial(self.at.pkginfo_from_file, handle_error=self.move_on_error)
-        versions = ((pki_ff(self.path / item), item) for item in files)
+        versions = [(pki_ff(self.path / item), item) for item in files]
+        versions.sort(key=lambda x: pkg_resources.parse_version(x[0].version))
 
         return self.write_leaf(self.path / leafname, versions)
 
