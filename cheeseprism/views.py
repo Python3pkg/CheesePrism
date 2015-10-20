@@ -107,7 +107,7 @@ def from_pypi(request, fpkgs='/find-packages'):
         flash("%s-%s not found" %(name, version))
         return HTTPFound(fpkgs)
 
-    candidates = [x for x in dists if request.index.SDIST_EXT.match(x['filename'])]
+    candidates = [x for x in dists if request.index.EXTS.match(x['filename'])]
 
     if candidates[0]['md5_digest'] in request.index_data:
         logger.debug('Package %s-%s already in index' %(name, version))
