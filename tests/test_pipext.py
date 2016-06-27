@@ -103,7 +103,7 @@ class TestReqDownloader(PipExtBase):
         pf = pipext.RequirementDownloader.package_finder
         finder = pf(deplinks=['a deplink'], index_urls=['an index_url'])
         assert finder.dependency_links == ['a deplink']
-        assert finder.index_urls == ['http://pypi.python.org/simple', 'an index_url']
+        assert finder.index_urls == ['https://pypi.python.org/simple', 'an index_url']
 
 
 class ZFMock(Mock):
