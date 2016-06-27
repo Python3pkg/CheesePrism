@@ -34,7 +34,7 @@ class IndexManager(object):
     """
 
     root_index_file = 'index.html'
-    EXTS = re.compile(r'^.*(?P<ext>\.egg|\.whl|\.gz|\.bz2|\.tgz|\.zip)$')
+    EXTS = re.compile(r'^.*(?P<ext>\.egg|-any\.whl|\.gz|\.bz2|\.tgz|\.zip)$')
     SDIST_EXT = re.compile(r'^.*(?P<ext>\.gz|\.bz2|\.tgz|\.zip)$')
 
     leaf_name = 'leaf.html'
