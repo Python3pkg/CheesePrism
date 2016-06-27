@@ -169,7 +169,7 @@ class RequirementDownloader(object):
         return pkginfo, outfile, req_set,
 
     pkg_finder_class = PackageFinder
-    index_urls = ['http://pypi.python.org/simple']
+    index_urls = ['https://pypi.python.org/simple']
 
     def download_all(self, req_set=None, finder=None):
         if req_set is None:

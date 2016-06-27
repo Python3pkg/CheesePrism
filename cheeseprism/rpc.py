@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class PyPi(object):
-    index = 'http://pypi.python.org/pypi'
+    index = 'https://pypi.python.org/pypi'
     pkglist = None
     timeout = 5 * 60
 
