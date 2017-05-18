@@ -15,7 +15,8 @@ class ArchiveUtil(object):
     """
     EXTS = re.compile(r'^.*(?P<ext>\.egg|\.gz|\.bz2|\.tgz|\.zip|\.whl)$')
 
-    def read(self, (arch, data)):
+    def read(self, xxx_todo_changeme):
+        (arch, data) = xxx_todo_changeme
         pkgdata = None
         if not arch.md5hex in data:
             pkgdata = self.arch_to_add_map(arch)
@@ -56,7 +57,7 @@ class ArchiveUtil(object):
                 elif ext == '.whl':
                     return pkginfo.wheel.Wheel(path)
             not_recognized = True
-        except Exception, e:
+        except Exception as e:
             if handle_error is not None:
                 return handle_error(e, path)
             raise

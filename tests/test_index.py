@@ -106,12 +106,12 @@ class IndexTestCase(unittest.TestCase):
         home, leaves = self.im.regenerate_all()
         pth = self.im.path
         file_structure = [(x.parent.name, x.name) for x in pth.walk()]
-        index_name = u'%s-test-index' %self.count
-        expected = [(index_name, u'dummypackage'),
-                    (u'dummypackage', u'index.html'),
-                    (path(u'dummypackage'), path(u'index.json')),
-                    (index_name, u'dummypackage-0.0dev.tar.gz'),
-                    (index_name, u'index.html')]
+        index_name = '%s-test-index' %self.count
+        expected = [(index_name, 'dummypackage'),
+                    ('dummypackage', 'index.html'),
+                    (path('dummypackage'), path('index.json')),
+                    (index_name, 'dummypackage-0.0dev.tar.gz'),
+                    (index_name, 'index.html')]
 
         assert len(leaves) == 1
         assert leaves[0].exists()
@@ -346,7 +346,7 @@ class IndexTestCase(unittest.TestCase):
         assert len(archs) == 1
         assert len(leaves) == 1
         assert 'dummypackage' in leaves
-        assert archs[0].basename() == u'dummypackage-0.0dev.tar.gz'
+        assert archs[0].basename() == 'dummypackage-0.0dev.tar.gz'
         assert index.regenerate_leaf.called
 
     @patch('pyramid.threadlocal.get_current_registry')
@@ -370,10 +370,10 @@ class IndexTestCase(unittest.TestCase):
 
 def test_group_by_magnitude():
     from cheeseprism.index import IndexManager
-    fiver = range(5)
+    fiver = list(range(5))
     assert IndexManager.group_by_magnitude(fiver)[0] == fiver
-    assert next(IndexManager.group_by_magnitude(range(101))) == range(10)
-    assert next(IndexManager.group_by_magnitude(range(1001))) == range(100)
+    assert next(IndexManager.group_by_magnitude(list(range(101)))) == list(range(10))
+    assert next(IndexManager.group_by_magnitude(list(range(1001)))) == list(range(100))
 
 
 class ClassOrStaticMethods(unittest.TestCase):

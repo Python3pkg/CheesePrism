@@ -10,7 +10,7 @@ from pyramid.decorator import reify
 from pyramid.events import subscriber
 from pyramid.httpexceptions import HTTPFound
 from stuf import stuf
-from test_pipext import PipExtBase
+from .test_pipext import PipExtBase
 import futures
 import itertools
 import unittest
@@ -241,7 +241,7 @@ class ViewTests(unittest.TestCase):
         request.POST['content'] = FakeFS(path('mastertest-0.0-master.tar.gz'))
 
         def test_pkif(p, moe):
-            assert p.basename() == u'mastertest-0.0.tar.gz'
+            assert p.basename() == 'mastertest-0.0.tar.gz'
             return stuf(name='mastertest', version='0.0-master')
 
         with patch('cheeseprism.index.IndexManager.pkginfo_from_file',

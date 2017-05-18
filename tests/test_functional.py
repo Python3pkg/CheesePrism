@@ -1,4 +1,4 @@
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 from cheeseprism.utils import path
 from cheeseprism.utils import resource_spec
 from itertools import count

@@ -2,7 +2,7 @@ from cheeseprism.index import IndexManager
 
 
 def includeme(config):
-    for name, func in request_funcs().items():
+    for name, func in list(request_funcs().items()):
         reify = not getattr(func, 'skip_reify', False)
         config.add_request_method(func, name=name, reify=reify)
 

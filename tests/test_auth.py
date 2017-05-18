@@ -1,5 +1,5 @@
 import unittest
-from test_views import CPDummyRequest
+from .test_views import CPDummyRequest
 
 
 class CPBasicAuthTest(unittest.TestCase):

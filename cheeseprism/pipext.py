@@ -5,7 +5,7 @@ from pip.exceptions import DistributionNotFound
 from pip.index import PackageFinder
 from pip.locations import build_prefix, src_prefix
 from pip.req import RequirementSet, parse_requirements
-from urllib2 import HTTPError
+from urllib.error import HTTPError
 import logging
 import requests
 import tarfile
@@ -143,14 +143,14 @@ class RequirementDownloader(object):
             
         try:
             pkginfo, outfile = self.download_url(url)
-        except HTTPError, e:
+        except HTTPError as e:
             msg = "Issue with download: %s" %e
             logger.error(msg)
             self.errors.append("%s: %s" %(req, msg)) 
             return
         except TypeError:
             raise
-        except Exception, e:
+        except Exception as e:
             msg = "Issue with archive: %s" %e
             logger.error(msg)
             self.errors.append("%s: %s" %(req, msg)) 
@@ -177,7 +177,7 @@ class RequirementDownloader(object):
         if finder is None:
             finder = self.finder or self.package_finder(None)
 
-        for req in req_set.requirements.values():
+        for req in list(req_set.requirements.values()):
             output = self.handle_requirement(req, finder)
             if output is None:
                 continue
@@ -185,7 +185,7 @@ class RequirementDownloader(object):
             pkginfo, outfile, req_set = output
             yield pkginfo, outfile
             if req_set is not None:
-                logger.info("Dependencies determined: %s" %req_set.requirements.keys())
+                logger.info("Dependencies determined: %s" %list(req_set.requirements.keys()))
                 for pkginfo, outfile in self.download_all(req_set, finder):
                     yield pkginfo, outfile
 

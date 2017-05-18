@@ -1,6 +1,6 @@
 #from time import time
 import logging
-import xmlrpclib
+import xmlrpc.client
 
 
 logger = logging.getLogger(__name__)
@@ -29,17 +29,17 @@ class PyPi(object):
 
     @classmethod
     def search(cls, package_name):
-        client = xmlrpclib.ServerProxy(cls.index)
+        client = xmlrpc.client.ServerProxy(cls.index)
         show_hidden = True
         return client.package_releases(package_name, show_hidden)
 
     ### for additional information
     @classmethod
     def package_details(cls, package_name, version_number):
-        client = xmlrpclib.ServerProxy(cls.index)
+        client = xmlrpc.client.ServerProxy(cls.index)
         return client.release_urls(package_name, version_number)
 
     @classmethod
     def release_urls(cls, package_name, version_number):
-        client = xmlrpclib.ServerProxy(cls.index)
+        client = xmlrpc.client.ServerProxy(cls.index)
         return client.release_urls(package_name, version_number)

@@ -101,7 +101,7 @@ def secure_filename(filename):
 
     Credit: from Armin Ronacher's Werkzeug, BSD
     """
-    if isinstance(filename, unicode):
+    if isinstance(filename, str):
         from unicodedata import normalize
         filename = normalize('NFKD', filename).encode('ascii', 'ignore')
     for sep in os.path.sep, os.path.altsep:

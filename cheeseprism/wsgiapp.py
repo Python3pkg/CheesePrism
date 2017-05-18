@@ -69,5 +69,5 @@ def setup_workers(registry):
     executor = registry['cp.executor'] = executor(workers)
 
     # -- This initializes our threads
-    workers = [str(pid) for pid in executor.map(ping_proc, range(workers))]
+    workers = [str(pid) for pid in executor.map(ping_proc, list(range(workers)))]
     logger.info("workers: %s", " ".join(workers))

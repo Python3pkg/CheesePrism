@@ -9,7 +9,7 @@ from pip.index import Link
 from pip.index import PackageFinder
 
 from pprint import pformat as pp
-from urllib2 import HTTPError
+from urllib.error import HTTPError
 import logging
 import pkginfo
 import unittest
@@ -69,8 +69,8 @@ class TestReqDownloader(PipExtBase):
         """
         rd = self.makeone()
         reqs = rd.req_set.requirements
-        assert len(reqs.values()) == 1
-        assert reqs.keys() == ['dummypackage'], reqs.keys()
+        assert len(list(reqs.values())) == 1
+        assert list(reqs.keys()) == ['dummypackage'], list(reqs.keys())
         self.download_dir = ''
         rd = self.makeone()
 
@@ -130,7 +130,7 @@ class TestReqDownloaderHandler(PipExtBase):
 
     def test_editable_req_error(self, download_url):
         rd = self.makeone()
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         req.editable = True
         assert rd.handle_requirement(req, self.mock_finder) is None
         assert rd.errors
@@ -143,13 +143,13 @@ class TestReqDownloaderHandler(PipExtBase):
         finder = self.mock_finder
         rd = self.makeone()
         finder.find_requirement.side_effect = self.raise_distnotfound
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         download_url.return_value = (self.get_pkginfo('dp'), self.dists['dp']) # for failing test
         assert rd.handle_requirement(req, finder) is None
 
     def basic_prep(self, download_url):
         rd = self.makeone()
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         download_url.return_value = (self.get_pkginfo('dp'), self.dists['dp'])
         return rd, req
 
@@ -187,7 +187,7 @@ class TestReqDownloaderHandler(PipExtBase):
 
     def test_handle_requirement_httperror(self, download_url):
         rd = self.makeone()
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         download_url.side_effect = self.raise_http_error
         assert rd.handle_requirement(req, self.mock_finder) is None
         assert len(rd.errors) == 1
@@ -195,7 +195,7 @@ class TestReqDownloaderHandler(PipExtBase):
 
     def test_handle_requirement_noreqs(self, download_url):
         rd = self.makeone()
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         download_url.return_value = (self.get_pkginfo('dp'), self.dists['dp'])
         (pkginfo, path_to_sdist, deps) = rd.handle_requirement(req, self.mock_finder)
         assert deps is None, deps
@@ -204,16 +204,16 @@ class TestReqDownloaderHandler(PipExtBase):
 
     def test_handle_requirement_w_reqs(self, download_url):
         rd = self.makeone()
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         download_url.return_value = (self.get_pkginfo('dp2'), self.dists['dp2'])
         (pkginfo, path_to_sdist, deps) = rd.handle_requirement(req, self.mock_finder)
         assert pkginfo.name == 'dummypackage'
         assert path_to_sdist == self.dists['dp2']
-        assert deps.requirements.keys() == ['something-else'], deps.requirements.keys()
+        assert list(deps.requirements.keys()) == ['something-else'], list(deps.requirements.keys())
 
     def test_handle_requirement_w_whl(self, download_url):
         rd = self.makeone()
-        req = rd.req_set.requirements.values().pop()
+        req = list(rd.req_set.requirements.values()).pop()
         fp = here / 'dummypackage/dist/dummypackage-0.0dev-py27-none-any.whl'
         download_url.return_value = (self.at.pkginfo_from_file(fp), fp)
         (pkginfo, path_to_sdist, deps) = rd.handle_requirement(req, self.mock_finder)

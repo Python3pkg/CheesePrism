@@ -383,7 +383,7 @@ class IndexManager(object):
         if datafile is None:
             datafile = self.datafile_path
 
-        archs = self.files if pkgdatas is None else pkgdatas.keys()
+        archs = self.files if pkgdatas is None else list(pkgdatas.keys())
         new = []
 
         archs_g = self.group_by_magnitude([x for x in archs])

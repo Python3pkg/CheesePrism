@@ -10,13 +10,14 @@ from pyramid.i18n import TranslationStringFactory
 from pyramid.path import DottedNameResolver as dnr
 from pyramid.view import view_config
 from pyramid_jinja2 import renderer_factory
-from urllib2 import HTTPError
-from urllib2 import URLError
+from urllib.error import HTTPError
+from urllib.error import URLError
 from webob import exc
 import logging
 import pkg_resources
 import requests
 import tempfile
+import collections
 
 
 resolve = dnr(None).maybe_resolve
@@ -121,11 +122,11 @@ def from_pypi(request, fpkgs='/find-packages'):
         resp = requests.get(url)
         newfile = request.file_root / filename
         newfile.write_bytes(resp.content)
-    except HTTPError, e:
+    except HTTPError as e:
         error = "HTTP Error: %d %s - %s" %(e.code, exc.status_map[e.code].title, url)
         logger.error(error)
         flash(error)
-    except URLError, e:
+    except URLError as e:
         logger.error("URL Error: %s, %s", e.reason , url)
         flash('Url error attempting to grab %s: %s' %(url, e.reason))
 
@@ -135,7 +136,7 @@ def from_pypi(request, fpkgs='/find-packages'):
             request.registry.notify(added_event)
             flash('%s-%s was installed into the index successfully.' % (name, version))
             return HTTPFound('/index/%s' %name)
-        except Exception, e:
+        except Exception as e:
             flash('Issue with adding %s to index: See logs: %s' % (newfile.name, e))
 
     return HTTPFound(fpkgs)
@@ -202,6 +203,6 @@ def includeme(config):
     config.add_renderer('.html', renderer_factory)
 
     namer = resolve(config.registry.settings.get('cheeseprism.namer', 'cheeseprism.utils.secure_filename'))
-    assert namer and callable(namer), "Issue with namer: %s" %namer
+    assert namer and isinstance(namer, collections.Callable), "Issue with namer: %s" %namer
     config.registry['cheeseprism.namer'] = namer
     config.add_request_method(lambda req: namer, name='namer', reify=True)
